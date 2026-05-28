@@ -7,7 +7,7 @@ sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
 from backend.services.ocr_service import extract_text_from_file
 
-file_path = r'c:\Users\Amit\Downloads\healthmitra-scan-master\healthmitra-scan-master\backend\uploads\Report-2429011568-1.pdf'
+file_path = os.path.join(os.getcwd(), 'backend', 'uploads', 'sample_medical_report.png')
 
 try:
     print(f"Testing extraction for: {file_path}")

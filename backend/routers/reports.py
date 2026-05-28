@@ -108,6 +108,8 @@ async def upload_report(
             "confidence": ocr_result["confidence"]
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Report upload failed: {e}")
         logger.error(traceback.format_exc())

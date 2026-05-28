@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import {
-    LayoutDashboard, FileText, Activity, Clock, UserCircle, Users, Cpu, Wifi, ScanLine, MessageSquareHeart, CircleHelp, Moon, Sun
+    LayoutDashboard, FileText, Activity, Clock, UserCircle, Users, Cpu, Wifi, ScanLine, CircleHelp, Moon, Sun
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import ReportExplainer from './pages/ReportExplainer'
@@ -11,7 +11,6 @@ import HealthMemory from './pages/HealthMemory'
 import HealthTwin from './pages/HealthTwin'
 import RuralMode from './pages/RuralMode'
 import XrayAgent from './pages/XrayAgent'
-import AIMitra from './pages/AIMitra'
 import RespiratoryFaqs from './pages/RespiratoryFaqs'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -26,7 +25,6 @@ const navItems = [
     { section: 'Health Intelligence' },
     { path: '/risk', icon: Activity, label: 'Risk Predictor' },
     { path: '/memory', icon: Clock, label: 'Health Memory' },
-    { path: '/ai-mitra', icon: MessageSquareHeart, label: 'HealthMitra AI', badge: 'AI' },
     { path: '/respiratory-faqs', icon: CircleHelp, label: 'Lung FAQs' },
     { path: '/twin', icon: UserCircle, label: 'AI Health Twin' },
     { section: 'Special Modes' },
@@ -39,7 +37,6 @@ const pageTitles = {
     '/xray': 'X-Ray Sequential AI Agent',
     '/risk': 'Future Risk Predictor',
     '/memory': 'Health Memory',
-    '/ai-mitra': 'HealthMitra AI Chat',
     '/respiratory-faqs': 'Breathing And Lung FAQs',
     '/twin': 'AI Health Twin',
     '/rural': 'Rural ASHA Worker Mode',
@@ -203,7 +200,6 @@ export default function App() {
                     <Route path="/xray" element={<ProtectedRoute><XrayAgent /></ProtectedRoute>} />
                     <Route path="/risk" element={<ProtectedRoute><RiskPredictor /></ProtectedRoute>} />
                     <Route path="/memory" element={<ProtectedRoute><HealthMemory /></ProtectedRoute>} />
-                    <Route path="/ai-mitra" element={<ProtectedRoute><AIMitra /></ProtectedRoute>} />
                     <Route path="/respiratory-faqs" element={<ProtectedRoute><RespiratoryFaqs /></ProtectedRoute>} />
                     <Route path="/twin" element={<ProtectedRoute><HealthTwin /></ProtectedRoute>} />
                     <Route path="/rural" element={<ProtectedRoute><RuralMode /></ProtectedRoute>} />
