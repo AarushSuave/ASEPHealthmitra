@@ -149,6 +149,8 @@ if not exist "%MODELS_DIR%\yolov8-chest-xray" mkdir "%MODELS_DIR%\yolov8-chest-x
 if not exist "%MODELS_DIR%\chexfract-maira2" mkdir "%MODELS_DIR%\chexfract-maira2"
 if not exist "%MODELS_DIR%\yolov8-fracture" mkdir "%MODELS_DIR%\yolov8-fracture"
 if not exist "%HF_HOME%" mkdir "%HF_HOME%"
+"%PYTHON_EXE%" "%BACKEND_DIR%\scripts\download_models.py"
+if errorlevel 1 echo [WARN] Universal fracture setup helper failed; continuing with existing X-ray setup.
 echo [OK] Local model storage: %MODELS_DIR%
 echo.
 

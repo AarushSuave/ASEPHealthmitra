@@ -42,6 +42,8 @@ backend/models/.hf-cache/
 *.pth
 *.pt
 *.onnx
+*.h5
+*.keras
 
 # Logs
 *.log

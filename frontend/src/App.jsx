@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import {
-    LayoutDashboard, FileText, Activity, Clock, UserCircle, Users, Cpu, Wifi, ScanLine, CircleHelp, Moon, Sun
+    LayoutDashboard, FileText, Activity, Clock, UserCircle, Users, Cpu, Wifi, CircleHelp, Moon, Sun, Bone
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import ReportExplainer from './pages/ReportExplainer'
@@ -11,6 +11,7 @@ import HealthMemory from './pages/HealthMemory'
 import HealthTwin from './pages/HealthTwin'
 import RuralMode from './pages/RuralMode'
 import XrayAgent from './pages/XrayAgent'
+import UniversalFracture from './pages/UniversalFracture'
 import RespiratoryFaqs from './pages/RespiratoryFaqs'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -21,7 +22,7 @@ const navItems = [
     { section: 'Core Features' },
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/report', icon: FileText, label: 'Report Explainer' },
-    { path: '/xray', icon: ScanLine, label: 'X-Ray AI Agent', badge: 'NEW' },
+    { path: '/xray', icon: Bone, label: 'Full Body X-Ray Agent', badge: 'NEW' },
     { section: 'Health Intelligence' },
     { path: '/risk', icon: Activity, label: 'Risk Predictor' },
     { path: '/memory', icon: Clock, label: 'Health Memory' },
@@ -34,7 +35,10 @@ const navItems = [
 const pageTitles = {
     '/': 'Dashboard',
     '/report': 'Medical Report Explainer',
-    '/xray': 'X-Ray Sequential AI Agent',
+    '/xray': 'Universal Full Body Fracture Detection',
+    '/chest-xray': 'Chest X-Ray Sequential AI Agent',
+    '/fracture': 'Universal Fracture Detection',
+    '/fracture-detection': 'Universal Fracture Detection',
     '/risk': 'Future Risk Predictor',
     '/memory': 'Health Memory',
     '/respiratory-faqs': 'Breathing And Lung FAQs',
@@ -197,7 +201,10 @@ export default function App() {
                 <Routes>
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/report" element={<ProtectedRoute><ReportExplainer /></ProtectedRoute>} />
-                    <Route path="/xray" element={<ProtectedRoute><XrayAgent /></ProtectedRoute>} />
+                    <Route path="/xray" element={<ProtectedRoute><UniversalFracture /></ProtectedRoute>} />
+                    <Route path="/chest-xray" element={<ProtectedRoute><XrayAgent /></ProtectedRoute>} />
+                    <Route path="/fracture" element={<ProtectedRoute><UniversalFracture /></ProtectedRoute>} />
+                    <Route path="/fracture-detection" element={<ProtectedRoute><UniversalFracture /></ProtectedRoute>} />
                     <Route path="/risk" element={<ProtectedRoute><RiskPredictor /></ProtectedRoute>} />
                     <Route path="/memory" element={<ProtectedRoute><HealthMemory /></ProtectedRoute>} />
                     <Route path="/respiratory-faqs" element={<ProtectedRoute><RespiratoryFaqs /></ProtectedRoute>} />

@@ -1,0 +1,52 @@
+[
+  {
+    "code": "comminuted",
+    "name_en": "Comminuted",
+    "name_hi": "बहुखंडित फ्रैक्चर"
+  },
+  {
+    "code": "greenstick",
+    "name_en": "Greenstick",
+    "name_hi": "ग्रीनस्टिक फ्रैक्चर"
+  },
+  {
+    "code": "linear",
+    "name_en": "Linear",
+    "name_hi": "रैखिक फ्रैक्चर"
+  },
+  {
+    "code": "oblique",
+    "name_en": "Oblique",
+    "name_hi": "तिरछा फ्रैक्चर"
+  },
+  {
+    "code": "oblique_displaced",
+    "name_en": "Oblique Displaced",
+    "name_hi": "विस्थापित तिरछा फ्रैक्चर"
+  },
+  {
+    "code": "segmental",
+    "name_en": "Segmental",
+    "name_hi": "खंडीय फ्रैक्चर"
+  },
+  {
+    "code": "spiral",
+    "name_en": "Spiral",
+    "name_hi": "सर्पिल फ्रैक्चर"
+  },
+  {
+    "code": "transverse",
+    "name_en": "Transverse",
+    "name_hi": "अनुप्रस्थ फ्रैक्चर"
+  },
+  {
+    "code": "transverse_displaced",
+    "name_en": "Transverse Displaced",
+    "name_hi": "विस्थापित अनुप्रस्थ फ्रैक्चर"
+  },
+  {
+    "code": "healthy",
+    "name_en": "Healthy",
+    "name_hi": "स्वस्थ"
+  }
+]
