@@ -1,0 +1,57 @@
+HealthMitra Test Medical Report
+For software testing only. This is synthetic data and not a real patient report.
+
+Patient Name: Test Patient
+Age/Sex: 45/Male
+Report Date: 2026-05-28
+Sample ID: HM-TEST-001
+
+Complete Blood Count
+Hemoglobin: 10.8 g/dL
+WBC: 12800 /cumm
+RBC Count: 4.2 million/mm3
+Platelet Count: 180 x10^3/uL
+Hematocrit: 34 %
+MCV: 78 fL
+MCH: 25 pg
+MCHC: 31 g/dL
+
+Diabetes Markers
+Fasting Blood Sugar: 142 mg/dL
+HbA1c: 7.2 %
+
+Lipid Profile
+Total Cholesterol: 238 mg/dL
+LDL Cholesterol: 158 mg/dL
+HDL Cholesterol: 36 mg/dL
+Triglycerides: 210 mg/dL
+Lp(a): 88 nmol/L
+
+Kidney Function
+Urea: 46 mg/dL
+Creatinine: 1.4 mg/dL
+eGFR: 58 mL/min/1.73m2
+Uric Acid: 7.8 mg/dL
+
+Liver Function
+SGPT: 62 U/L
+SGOT: 48 U/L
+Total Bilirubin: 0.9 mg/dL
+Direct Bilirubin: 0.2 mg/dL
+ALP: 132 U/L
+Albumin: 3.8 g/dL
+
+Thyroid and Vitamins
+TSH: 5.1 mIU/L
+Vitamin D: 18 ng/mL
+Vitamin B12: 184 pg/mL
+
+Clinical Notes
+Patient reports fatigue, occasional breathlessness on exertion, and increased thirst.
+No acute chest pain reported. Blood pressure recorded at 148/92 mmHg.
+
+Expected App Behavior
+The report explainer should detect multiple abnormal markers, including anemia,
+diabetes risk, dyslipidemia, mild kidney function concern, thyroid elevation,
+and low vitamin D/B12. It should generate a high or moderate risk explanation
+depending on the scoring model.

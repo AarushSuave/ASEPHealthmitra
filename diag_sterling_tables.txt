@@ -1,0 +1,47 @@
+--- PAGE 11 RAW TEXT ---
+MC-2202
+Scan QR code to check
+report authenticity
+Passport No : LABORATORY TEST REPORT
+Patient Information Sample Information Client/Location Information
+Name : Lyubochka Svetka Lab Id : 02232160XXXX Client Name : Sterling Accuris Buddy
+Registration on : 20-Feb-2023 09:10
+Location :
+Sex/Age : Male / 41 Y 01-Feb-1982 Collected at : non SAWPL
+Approved on : 20-Feb-2023 11:10 Status : Final
+Ref. Id : Collected on : 20-Feb-2023 08:53
+Printed On : 28-Feb-2023 10:26
+Ref. By : Sample Type : Serum
+Process At : 1. NRL SAWPL Gujarat Ahmedabad Paldi
+Biochemistry
+Test Result Unit Biological Ref. Interval
+Creatinine, Serum 0.83 mg/dL 0.66 - 1.25
+Creatinine Amidohydrolase
+Urea L 18.0 mg/dL 19.3 - 43.0
+Urease, Colorimetric
+Blood Urea Nitrogen L 8.41 mg/dL 9.0 - 20.0
+Calculated
+Uric Acid 4.90 mg/dL 3.5 - 8.5
+Uricase
+Calcium 9.10 mg/dL 8.4 - 10.2
+Arsenazo III
+SGPT 48.0 U/L 0 - 50
+UV with P5P, IFCC
+SGOT 27.0 U/L 17 - 59
+UV with P5P
+Electrolytes
+Sodium (Na+) 143.00 mmol/L 136 - 145
+Direct- ISE
+Potassium (K+) 4.90 mmol/L 3.5 - 5.1
+Direct- ISE
+Chloride (Cl-) 105.0 mmol/L 98 - 107
+Direct- ISE
+Dr. Purvish Darji Dr. Sanjeev Shah Dr.Yash Shah
+MD(Path) MD Path MD Path
+This is an Electronically Authenticated Report. # Referred Test Page 11 of 19
+elaM-sraeY
+14-arupmoS
+kidraH
+.rM-621006123220
+
+--- PAGE 11 TABLES ---

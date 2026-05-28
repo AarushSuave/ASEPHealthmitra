@@ -1,0 +1,46 @@
+﻿Searching for keywords in: c:\Users\Amit\Downloads\healthmitra-scan-master\healthmitra-scan-master\backend\uploads\Report-2429011568-1.pdf
+Page 1, Line 13: PCV 44.6 40-50 % Calculated
+Page 1, Line 14: MCV 90 80-100 fl Calculated
+Page 1, Line 15: MCH 29.5 27-32 pg Calculated
+Page 1, Line 16: MCHC 32.8 31.5-34.5 g/dL Calculated
+Page 1, Line 16: MCHC 32.8 31.5-34.5 g/dL Calculated
+Page 2, Line 28: Reflex Test: C-Reactive Protein (CRP) is the recommended test in acute inflammatory conditions.
+Page 4, Line 10: BUN, Serum 14.2 6-20 mg/dl Calculated
+Page 4, Line 11: CREATININE, Serum 0.88 0.67-1.17 mg/dl Enzymatic
+Page 4, Line 22: TOTAL PROTEINS, Serum 7.7 6-8 g/dL Biuret
+Page 4, Line 24: GLOBULIN, Serum 2.9 2.3-3.5 g/dL Calculated
+Page 6, Line 12: ò To determine if a person has a vitamin B12 or folate deficiency.
+Page 6, Line 12: ò To determine if a person has a vitamin B12 or folate deficiency.
+Page 6, Line 19: Increased In: Vitamin B12, vitamin B6, or folate deficiency, Homocysitnuria, Hypothyroidism, Chronic renal failure and Coronary heart disease.
+Page 6, Line 19: Increased In: Vitamin B12, vitamin B6, or folate deficiency, Homocysitnuria, Hypothyroidism, Chronic renal failure and Coronary heart disease.
+Page 6, Line 21: Reflex Tests: Vitamin B12, B6 and folate levels
+Page 6, Line 21: Reflex Tests: Vitamin B12, B6 and folate levels
+Page 6, Line 28: ò Heterophilic antibodies in human specimens can react with reagent immunoglobulins, interfering with the test.
+Page 7, Line 7: LIPOPROTEIN (a) [Lp (a)]
+Page 7, Line 9: LIPOPROTEIN (a), Serum 103.2 <72 nmol/l Turbidimetry
+Page 7, Line 11: ò Lipoprotein (a) is an independent prospective risk factor for coronary heart disease
+Page 7, Line 14: ò Lipoprotein a Lp(a) is a heterogenous group of lipoproteins consisting of an Apo A molecule attached to an Apo B molecule.
+Page 7, Line 23: ò Main problem for accurate detection of Lp(a) is the size polymorphism of apolipoprotein a.
+Page 7, Line 27: ò Lipoprotein (a) Pack Insert
+Page 8, Line 7: VITAMIN B12
+Page 8, Line 7: VITAMIN B12
+Page 8, Line 9: VITAMIN B12, Serum 584 197-771 pg/ml ECLIA
+Page 8, Line 9: VITAMIN B12, Serum 584 197-771 pg/ml ECLIA
+Page 8, Line 11: ò Vitamin B12 is also referred to as cyanocobalamin/cobalmin.
+Page 8, Line 11: ò Vitamin B12 is also referred to as cyanocobalamin/cobalmin.
+Page 8, Line 14: ò The absorption of Vit B12 depends on the presence of Intrinsic factor (IF) & may be due to lack of IF secretion by the gastric mucosa
+Page 8, Line 16: ò Dietary Sources of vitamin B12 are meat, fish, eggs & dairy products.
+Page 8, Line 16: ò Dietary Sources of vitamin B12 are meat, fish, eggs & dairy products.
+Page 8, Line 18: ò Vitamin B12 or folate are both of diagnostic importance for the recognition of vitamin B12 or folate deficiency, especially in the
+Page 8, Line 18: ò Vitamin B12 or folate are both of diagnostic importance for the recognition of vitamin B12 or folate deficiency, especially in the
+Page 8, Line 23: Increased In- Vit B12 supplements, chronic granulocytic leukemia, COPD, Chronic renal failure, diabetes, leucocytosis, hepatitis, cirrhosis,
+Page 8, Line 24: obesity, polycythemia vera, protein malnutrition, severe CHF, uremia, Vit A intake, estrogens, drugs such as chloral hydrate.
+Page 8, Line 27: metformin, neomycin, oral contraceptives, ranitidine & triamterine also cause a decrease in Vit B12 levels.
+Page 8, Line 28: Reflex Tests: Active B12 (holotranscobalamin), Folate, Homocysteine, Methylmalonic acid (MMA) and Intrinsic factor antibody & parietal cell
+Page 8, Line 31: Reference: Vitamin B12 Pack insert
+Page 8, Line 31: Reference: Vitamin B12 Pack insert
+Page 9, Line 31: ò Heterophilic antibodies in human serum can react with reagent immunoglobulins, interfering with in vitro immunoassays. Patients
+Page 13, Line 29: Reflex Tests:Anti thyroid Antibodies,USG Thyroid ,TSH receptor Antibody. Thyroglobulin, Calcitonin
+Page 14, Line 12: TOTAL PROTEINS, Serum 7.7 6-8 g/dL Biuret
+Page 14, Line 14: GLOBULIN, Serum 2.9 2.3-3.5 g/dL Calculated
+Page 14, Line 19: ALKALINE PHOSPHATASE, 77.1 40-130 U/L Colorimetric

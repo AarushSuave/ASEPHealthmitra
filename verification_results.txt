@@ -1,0 +1,49 @@
+
+--- VERIFYING EXPANDED EXTRACTION ---
+TOTAL PARAMETERS EXTRACTED: 26
+
+[Heart/Lipids] (5):
+  - Homocysteine: 18.9 µmol/L (High)
+  - Lp(a): 103.2 nmol/L (High)
+  - Triglycerides: 64.2 mg/dL (Normal)
+  - HDL Cholesterol: 45.6 mg/dL (Normal)
+  - LDL Cholesterol: 67.0 mg/dL (Normal)
+
+[Diabetes/Metabolic] (2):
+  - Vitamin D: 25.0 ng/mL (Low)
+  - TSH: 4.0 mIU/L (Normal)
+
+[CBC (Blood)] (7):
+  - RBC Count: 4.96 million/mm³ (Normal)
+  - Hematocrit: 44.6 % (Normal)
+  - MCV: 90.0 fL (Normal)
+  - MCH: 29.5 pg (Normal)
+  - MCHC: 32.8 g/dL (Normal)
+  - WBC: 7500.0 /cumm (Normal)
+  - Platelet Count: 254.0 x10³/µL (Normal)
+
+[Liver (LFT)] (6):
+  - SGOT: 79.1 U/L (High)
+  - Total Protein: 7.7 g/dL (Normal)
+  - Albumin: 4.8 g/dL (Normal)
+  - Globulin: 2.9 g/dL (Normal)
+  - SGPT: 14.0 U/L (Normal)
+  - ALP: 77.1 U/L (Normal)
+
+[Kidney (KFT)] (5):
+  - Urea: 30.3 mg/dL (Normal)
+  - BUN: 14.2 mg/dL (Normal)
+  - Creatinine: 0.88 mg/dL (Normal)
+  - eGFR: 128.0 mL/min/1.73m² (Normal)
+  - Uric Acid: 6.5 mg/dL (Normal)
+
+[Other] (1):
+  - Vitamin B12: 584.0 pg/mL (Normal)
+
+REMEDIES SUGGESTED:
+- Incorporate liver-friendly foods like green leafy vegetables and turmeric.
+- Discuss these results with your primary care physician for a formal diagnosis.
+- Consume Vitamin D rich foods like fatty fish or fortified cereals.
+- Increase safe sunlight exposure (15-20 minutes daily in mid-morning).
+- Ensure 7-8 hours of quality sleep for metabolic recovery.
+- Avoid alcohol consumption and limit highly processed/oily foods.

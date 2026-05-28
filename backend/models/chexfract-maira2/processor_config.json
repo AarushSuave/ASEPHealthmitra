@@ -1,0 +1,6 @@
+{
+  "auto_map": {
+    "AutoProcessor": "processing_chexbones.ChexBonesProcessor"
+  },
+  "processor_class": "ChexBonesProcessor"
+}
