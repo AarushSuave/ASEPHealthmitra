@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from database import init_db
 from config import APP_NAME, APP_VERSION, CORS_ORIGINS, UPLOAD_DIR
 
-from routers import reports, risk, patients, dashboard, health_twin, xray_agent, chat, universal_fracture
+from routers import reports, risk, patients, dashboard, health_twin, xray_agent, chat, universal_fracture, universal_xray
 from routers import auth
 
 from contextlib import asynccontextmanager
@@ -54,6 +54,7 @@ app.include_router(dashboard.router)
 app.include_router(health_twin.router)
 app.include_router(xray_agent.router)
 app.include_router(universal_fracture.router)
+app.include_router(universal_xray.router)
 app.include_router(chat.router)
 
 
@@ -70,6 +71,7 @@ def root():
             "xray_agent": "/api/xray-agent",
             "universal_fracture": "/api/fracture",
             "chat": "/api/chat",
+            "universal_xray": "/api/xray",
         }
     }
 
