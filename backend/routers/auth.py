@@ -82,6 +82,7 @@ def _user_to_dict(user: User) -> dict:
         "medical_conditions": json.loads(user.medical_conditions) if user.medical_conditions else [],
         "allergies": json.loads(user.allergies) if user.allergies else [],
         "emergency_contact": user.emergency_contact,
+        "role": user.role,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 

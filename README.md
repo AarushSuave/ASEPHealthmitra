@@ -27,7 +27,6 @@ Healthcare shouldn’t depend on connectivity.
 
 **HealthMitra Scan** is a **fully offline AI healthcare assistant** that:
 
-- 🩻 Analyzes X-rays  
 - 📄 Explains medical reports  
 - ❤️ Predicts disease risks  
 - 🤖 Answers medical questions  
@@ -38,18 +37,6 @@ Healthcare shouldn’t depend on connectivity.
 ---
 
 ## ✨ Features
-
-### 🩻 X-Ray AI Agent
-<p align="center">
-  <img src="./assets/xray.gif" width="700"/>
-</p>
-
-- View validation (AP/PA)
-- Pneumonia detection (YOLOv8)
-- Fracture detection (ChexFract)
-- Bilingual report generation
-
----
 
 ### 📄 Report Explainer
 <p align="center">
@@ -115,10 +102,7 @@ Healthcare shouldn’t depend on connectivity.
 ### Backend
 - FastAPI + SQLAlchemy + SQLite
 
-### AI / ML
-- YOLOv8 (Pneumonia)
-- ChexFract (Fractures)
-- torchxrayvision (Validation)
+
 
 ### LLM
 - Ollama (Phi-3 / Llama 3)

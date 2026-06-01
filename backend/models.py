@@ -20,11 +20,29 @@ class User(Base):
     medical_conditions = Column(Text)  # JSON: ["diabetes", "hypertension"]
     allergies = Column(Text)  # JSON: ["peanuts", "penicillin"]
     emergency_contact = Column(String(100))
+    role = Column(String(20), default='user') # 'user' or 'admin'
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     reports = relationship("MedicalReport", back_populates="user")
     timeline = relationship("HealthTimeline", back_populates="user")
+    visits = relationship("Visit", back_populates="user")
+
+class Visit(Base):
+    __tablename__ = "visits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    patient_name = Column(String(100))
+    village_name = Column(String(100))
+    visit_date = Column(DateTime)
+    purpose = Column(String(255))
+    status = Column(String(20), default='scheduled') # scheduled, completed, cancelled
+    notes = Column(Text)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", back_populates="visits")
+
 
 
 class Patient(Base):

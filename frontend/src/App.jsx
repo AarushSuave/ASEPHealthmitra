@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import {
-    LayoutDashboard, FileText, Activity, Clock, UserCircle, Users, Cpu, Wifi, CircleHelp, Moon, Sun, Bone
+    LayoutDashboard, FileText, Activity, Clock, UserCircle, Users, Cpu, Wifi, CircleHelp, Moon, Sun, Bone, Calendar, History
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import ReportExplainer from './pages/ReportExplainer'
@@ -10,19 +10,22 @@ import RiskPredictor from './pages/RiskPredictor'
 import HealthMemory from './pages/HealthMemory'
 import HealthTwin from './pages/HealthTwin'
 import RuralMode from './pages/RuralMode'
-import XrayAgent from './pages/XrayAgent'
-import UniversalFracture from './pages/UniversalFracture'
 import RespiratoryFaqs from './pages/RespiratoryFaqs'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Profile from './pages/Profile'
+import VisitPlanner from './pages/VisitPlanner'
+import VisitsHistory from './pages/VisitsHistory'
+import AdminLayout from './components/AdminLayout'
+import AdminDashboard from './pages/AdminDashboard'
+import AdminVillages from './pages/AdminVillages'
+import AdminPatients from './pages/AdminPatients'
 import healthmitraLogo from './assets/healthmitra-logo.jpeg'
 
 const navItems = [
     { section: 'Core Features' },
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/report', icon: FileText, label: 'Report Explainer' },
-    { path: '/xray', icon: Bone, label: 'Full Body X-Ray Agent', badge: 'NEW' },
     { section: 'Health Intelligence' },
     { path: '/risk', icon: Activity, label: 'Risk Predictor' },
     { path: '/memory', icon: Clock, label: 'Health Memory' },
@@ -30,21 +33,22 @@ const navItems = [
     { path: '/twin', icon: UserCircle, label: 'AI Health Twin' },
     { section: 'Special Modes' },
     { path: '/rural', icon: Users, label: 'Rural ASHA Mode' },
+    { section: 'Visits' },
+    { path: '/visits', icon: Calendar, label: 'Visit Planner' },
+    { path: '/history', icon: History, label: 'Visits History' },
 ]
 
 const pageTitles = {
-    '/': 'Dashboard',
+    '/': 'OurHealth Dashboard',
     '/report': 'Medical Report Explainer',
-    '/xray': 'Universal Full Body Fracture Detection',
-    '/chest-xray': 'Chest X-Ray Sequential AI Agent',
-    '/fracture': 'Universal Fracture Detection',
-    '/fracture-detection': 'Universal Fracture Detection',
     '/risk': 'Future Risk Predictor',
     '/memory': 'Health Memory',
     '/respiratory-faqs': 'Breathing And Lung FAQs',
     '/twin': 'AI Health Twin',
     '/rural': 'Rural ASHA Worker Mode',
     '/profile': 'My Profile',
+    '/visits': 'Visit Planner',
+    '/history': 'Previous Visits History',
 }
 
 function ProtectedRoute({ children }) {
@@ -86,6 +90,20 @@ export default function App() {
             <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+            </Routes>
+        )
+    }
+
+    if (user?.role === 'admin') {
+        return (
+            <Routes>
+                <Route path="/admin" element={<AdminLayout />}>
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="villages" element={<AdminVillages />} />
+                    <Route path="patients" element={<AdminPatients />} />
+                    <Route path="*" element={<Navigate to="/admin" replace />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/admin" replace />} />
             </Routes>
         )
     }
@@ -201,16 +219,14 @@ export default function App() {
                 <Routes>
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/report" element={<ProtectedRoute><ReportExplainer /></ProtectedRoute>} />
-                    <Route path="/xray" element={<ProtectedRoute><UniversalFracture /></ProtectedRoute>} />
-                    <Route path="/chest-xray" element={<ProtectedRoute><XrayAgent /></ProtectedRoute>} />
-                    <Route path="/fracture" element={<ProtectedRoute><UniversalFracture /></ProtectedRoute>} />
-                    <Route path="/fracture-detection" element={<ProtectedRoute><UniversalFracture /></ProtectedRoute>} />
                     <Route path="/risk" element={<ProtectedRoute><RiskPredictor /></ProtectedRoute>} />
                     <Route path="/memory" element={<ProtectedRoute><HealthMemory /></ProtectedRoute>} />
                     <Route path="/respiratory-faqs" element={<ProtectedRoute><RespiratoryFaqs /></ProtectedRoute>} />
                     <Route path="/twin" element={<ProtectedRoute><HealthTwin /></ProtectedRoute>} />
                     <Route path="/rural" element={<ProtectedRoute><RuralMode /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/visits" element={<ProtectedRoute><VisitPlanner /></ProtectedRoute>} />
+                    <Route path="/history" element={<ProtectedRoute><VisitsHistory /></ProtectedRoute>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </main>

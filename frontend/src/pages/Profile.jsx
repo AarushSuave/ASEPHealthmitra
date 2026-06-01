@@ -19,6 +19,7 @@ export default function Profile() {
             age: user.age || '',
             gender: user.gender || '',
             blood_group: user.blood_group || '',
+            village: user.village || '',
             medical_conditions: (user.medical_conditions || []).join(', '),
             allergies: (user.allergies || []).join(', '),
             emergency_contact: user.emergency_contact || '',

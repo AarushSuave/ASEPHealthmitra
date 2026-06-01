@@ -39,6 +39,7 @@ def get_full_timeline(db: Session = Depends(get_db)):
         "event_type": a.event_type,
         "title": a.title,
         "desc": a.description,
+        "description": a.description,
         "risk_score": a.risk_score,
         "created_at": a.created_at.isoformat() if a.created_at else None
     } for a in activities]

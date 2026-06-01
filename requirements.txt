@@ -19,21 +19,4 @@ pdfplumber>=0.11.4
 pandas>=2.2.2
 PyMuPDF>=1.24.10
 
-# X-Ray Sequential AI Agent Dependencies
-torch>=2.1.0
-torchvision>=0.16.0
-torchaudio>=2.1.0
-torchxrayvision>=1.0.1
-transformers>=4.44.0
-huggingface_hub>=0.24.0
-opencv-python-headless>=4.8.0
-openai>=1.40.0
-anthropic>=0.34.0
-requests>=2.31.0
-httpx>=0.27.0
 
-# Universal Fracture Detector Dependencies
-tensorflow>=2.13.0; python_version < "3.13"
-onnxruntime>=1.15.0
-psutil>=5.9.0
-scikit-learn>=1.3.0

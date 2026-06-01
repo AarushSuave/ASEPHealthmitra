@@ -10,8 +10,6 @@ set "BACKEND_DIR=%ROOT_DIR%\backend"
 set "FRONTEND_DIR=%ROOT_DIR%\frontend"
 set "VENV_PYTHON=%ROOT_DIR%\venv\Scripts\python.exe"
 set "MODELS_DIR=%BACKEND_DIR%\models"
-set "HF_HOME=%MODELS_DIR%\.hf-cache"
-set "TRANSFORMERS_CACHE=%HF_HOME%\transformers"
 set "HEALTHMITRA_REQUIRE_REAL_MODELS=1"
 
 set "FORCE_SETUP=0"
@@ -42,21 +40,7 @@ if not exist "%VENV_PYTHON%" (
     pause
     exit /b 1
 )
-if not exist "%MODELS_DIR%\yolov8-chest-xray\best.pt" (
-    echo [ERROR] Pneumonia model is missing. Run setup.bat.
-    pause
-    exit /b 1
-)
-if not exist "%MODELS_DIR%\yolov8-fracture\best.pt" (
-    echo [ERROR] Fracture YOLO model is missing. Run setup.bat.
-    pause
-    exit /b 1
-)
-if not exist "%MODELS_DIR%\chexfract-maira2\config.json" (
-    echo [ERROR] ChexFract model is missing. Run setup.bat.
-    pause
-    exit /b 1
-)
+
 
 echo =======================================================
 echo   HealthMitra Scan - Fast Boot
@@ -92,7 +76,6 @@ echo =======================================================
 echo   HealthMitra Scan is running
 echo   Backend:  http://localhost:8000
 echo   Frontend: http://localhost:5173
-echo   X-Ray:    http://localhost:8000/api/xray-agent/status
 echo =======================================================
 echo.
 timeout /t 2 /nobreak >nul

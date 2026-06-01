@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 const quickActions = [
     { icon: FileText, label: 'Scan Report', path: '/report', color: '#06b6d4' },
     { icon: Activity, label: 'Risk Check', path: '/risk', color: '#f59e0b' },
-    { icon: MessageSquareHeart, label: 'AI Chat', path: '/ai-mitra', color: '#8b5cf6' },
     { icon: Users, label: 'Rural Mode', path: '/rural', color: '#ec4899' },
     { icon: Clock, label: 'Health Timeline', path: '/memory', color: '#3b82f6' },
 ]

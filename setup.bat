@@ -20,8 +20,6 @@ if "%ROOT_DIR:~-1%"=="\" set "ROOT_DIR=%ROOT_DIR:~0,-1%"
 set "BACKEND_DIR=%ROOT_DIR%\backend"
 set "FRONTEND_DIR=%ROOT_DIR%\frontend"
 set "MODELS_DIR=%BACKEND_DIR%\models"
-set "HF_HOME=%MODELS_DIR%\.hf-cache"
-set "TRANSFORMERS_CACHE=%HF_HOME%\transformers"
 set "HEALTHMITRA_REQUIRE_REAL_MODELS=1"
 
 set "PYTHON_EXE=%ROOT_DIR%\venv\Scripts\python.exe"
@@ -145,59 +143,10 @@ echo [4/7] Preparing local model directories...
 if not exist "%MODELS_DIR%" mkdir "%MODELS_DIR%"
 if not exist "%BACKEND_DIR%\uploads" mkdir "%BACKEND_DIR%\uploads"
 if not exist "%BACKEND_DIR%\uploads\profiles" mkdir "%BACKEND_DIR%\uploads\profiles"
-if not exist "%MODELS_DIR%\yolov8-chest-xray" mkdir "%MODELS_DIR%\yolov8-chest-xray"
-if not exist "%MODELS_DIR%\chexfract-maira2" mkdir "%MODELS_DIR%\chexfract-maira2"
-if not exist "%MODELS_DIR%\yolov8-fracture" mkdir "%MODELS_DIR%\yolov8-fracture"
-if not exist "%HF_HOME%" mkdir "%HF_HOME%"
-"%PYTHON_EXE%" "%BACKEND_DIR%\scripts\download_models.py"
-if errorlevel 1 echo [WARN] Universal fracture setup helper failed; continuing with existing X-ray setup.
 echo [OK] Local model storage: %MODELS_DIR%
 echo.
 
-echo [5/7] Installing X-ray AI models locally...
-if "%SKIP_MODELS%"=="1" (
-    echo [WARN] --skip-models supplied. X-ray analysis will not be marked setup-complete.
-    goto model_check
-)
-
-if not exist "%MODELS_DIR%\yolov8-chest-xray\best.pt" (
-    echo [MODEL 1/3] Downloading pneumonia model...
-    "%PYTHON_EXE%" -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='keremberke/yolov8m-chest-xray-classification', local_dir=r'%MODELS_DIR%\yolov8-chest-xray', repo_type='model', ignore_patterns=['*.md','*.txt'])"
-    if errorlevel 1 goto model_fail
-) else (
-    echo [MODEL 1/3] Pneumonia model already present.
-)
-
-if not exist "%MODELS_DIR%\yolov8-fracture\best.pt" (
-    echo [MODEL 2/3] Downloading fracture YOLO fallback model...
-    "%PYTHON_EXE%" -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='adeebaai/bone-fracture-yolov8', local_dir=r'%MODELS_DIR%\yolov8-fracture', repo_type='model', ignore_patterns=['*.md','*.txt'])"
-    if errorlevel 1 goto model_fail
-) else (
-    echo [MODEL 2/3] Fracture YOLO model already present.
-)
-
-if not exist "%MODELS_DIR%\chexfract-maira2\config.json" (
-    echo [MODEL 3/3] Downloading ChexFract MAIRA-2 model. This is large.
-    "%PYTHON_EXE%" -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='AIRI-Institute/chexfract-maira2', local_dir=r'%MODELS_DIR%\chexfract-maira2', repo_type='model')"
-    if errorlevel 1 goto model_fail
-) else (
-    echo [MODEL 3/3] ChexFract model already present.
-)
-
-:model_check
-if not exist "%MODELS_DIR%\yolov8-chest-xray\best.pt" (
-    echo [ERROR] Missing required model: %MODELS_DIR%\yolov8-chest-xray\best.pt
-    goto fail
-)
-if not exist "%MODELS_DIR%\yolov8-fracture\best.pt" (
-    echo [ERROR] Missing required model: %MODELS_DIR%\yolov8-fracture\best.pt
-    goto fail
-)
-if not exist "%MODELS_DIR%\chexfract-maira2\config.json" (
-    echo [ERROR] Missing required model: %MODELS_DIR%\chexfract-maira2\config.json
-    goto fail
-)
-echo [OK] X-ray AI models are installed locally.
+echo [5/7] X-ray AI models removed.
 echo.
 
 echo [6/7] Checking optional local tools...

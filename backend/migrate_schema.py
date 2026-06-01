@@ -40,6 +40,40 @@ def migrate():
     else:
         print("'remedies' column already exists.")
 
+    # Check columns in users
+    cursor.execute("PRAGMA table_info(users)")
+    user_columns = [row[1] for row in cursor.fetchall()]
+    if "role" not in user_columns:
+        print("Adding 'role' column to 'users'...")
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'")
+            conn.commit()
+            print("Successfully added 'role' column.")
+        except Exception as e:
+            print(f"Error adding role: {e}")
+    
+    # Create visits table
+    print("Creating 'visits' table if not exists...")
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS visits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                patient_name VARCHAR(100),
+                village_name VARCHAR(100),
+                visit_date DATETIME,
+                purpose VARCHAR(255),
+                status VARCHAR(20) DEFAULT 'scheduled',
+                notes TEXT,
+                created_at DATETIME,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+        """)
+        conn.commit()
+        print("Successfully created 'visits' table.")
+    except Exception as e:
+        print(f"Error creating visits table: {e}")
+
     conn.close()
 
 if __name__ == "__main__":
