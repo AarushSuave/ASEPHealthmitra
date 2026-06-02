@@ -12,10 +12,10 @@ export default function AdminLayout() {
     const { user, logout } = useAuth()
 
     return (
-        <div className="admin-layout" style={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: 'white' }}>
+        <div className="admin-layout" style={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #3f1d2e 0%, #7c2d12 45%, #1f2937 100%)', color: 'white' }}>
             <aside style={{ width: 260, borderRight: '1px solid rgba(255,255,255,0.1)', padding: '24px 16px', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ marginBottom: 40, padding: '0 12px' }}>
-                    <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>HealthMitra Admin</h1>
+                    <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>OurHealth Admin</h1>
                     <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>Command Center</div>
                 </div>
 

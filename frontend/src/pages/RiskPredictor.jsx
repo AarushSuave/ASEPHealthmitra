@@ -74,8 +74,8 @@ export default function RiskPredictor() {
     return (
         <div>
             <div className="page-header">
-                <h2>📊 Future Risk Predictor</h2>
-                <p>Enter your vitals to predict diabetes and heart disease risk with AI</p>
+                <h2>📊 Future Risk Predictor / भविष्य जोखिम पूर्वानुमान</h2>
+                <p>Enter your vitals to predict diabetes and heart disease risk with AI (शुगर और दिल की बीमारी का अनुमान).</p>
             </div>
 
             <div style={{ display: 'flex', gap: 24 }}>

@@ -8,6 +8,7 @@ export default function Login() {
     const [password, setPassword] = useState('')
     const [rememberMe, setRememberMe] = useState(localStorage.getItem('hm_remember_me') === 'true')
     const [showPass, setShowPass] = useState(false)
+    const [loginRole, setLoginRole] = useState('user') // user | admin | asha
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const { login } = useAuth()
@@ -26,7 +27,7 @@ export default function Login() {
         setLoading(true)
         setError('')
         try {
-            await login(email, password)
+            await login(email, password, loginRole)
 
             // Persist email if rememberMe is checked
             if (rememberMe) {
@@ -36,6 +37,7 @@ export default function Login() {
                 localStorage.removeItem('hm_remembered_email')
                 localStorage.setItem('hm_remember_me', 'false')
             }
+            localStorage.setItem('hm_login_mode', loginRole)
 
             navigate('/')
         } catch (err) {
@@ -92,17 +94,54 @@ export default function Login() {
                                 checked={rememberMe}
                                 onChange={e => setRememberMe(e.target.checked)}
                             />
-                            <span>Remember Me</span>
+                            <span>Remember Me / याद रखें</span>
                         </label>
+                        <div className="auth-role-toggle" aria-label="Choose login type">
+                            <button
+                                type="button"
+                                className={`role-pill ${loginRole === 'user' ? 'active' : ''}`}
+                                onClick={() => setLoginRole('user')}
+                            >
+                                User उपयोगकर्ता
+                            </button>
+                            <button
+                                type="button"
+                                className={`role-pill ${loginRole === 'asha' ? 'active' : ''}`}
+                                onClick={() => setLoginRole('asha')}
+                            >
+                                ASHA समन्वयक
+                            </button>
+                            <button
+                                type="button"
+                                className={`role-pill ${loginRole === 'admin' ? 'active' : ''}`}
+                                onClick={() => setLoginRole('admin')}
+                            >
+                                Admin व्यवस्थापक
+                            </button>
+                        </div>
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-lg auth-btn" disabled={loading}>
-                        {loading ? <><span className="spinner" style={{ width: 18, height: 18 }} /> Signing in...</> : <><LogIn size={18} /> Sign In</>}
+                        {loading ? (
+                            <>
+                                <span className="spinner" style={{ width: 18, height: 18 }} /> Signing in...
+                            </>
+                        ) : (
+                            <>
+                                <LogIn size={18} />{loginRole === 'admin'
+                                    ? ' Admin Login / प्रशासन'
+                                    : loginRole === 'asha'
+                                        ? ' ASHA Login / आशा'
+                                        : ' Login / लॉगिन'}
+                            </>
+                        )}
                     </button>
                 </form>
 
                 <div className="auth-footer">
-                    Don't have an account? <Link to="/signup">Create Account</Link>
+                    {loginRole === 'admin' && 'Admin credentials are read from admin_credentials.txt'}
+                    {loginRole === 'asha' && 'ASHA coordinator credentials are read from asha_credentials.txt'}
+                    {loginRole === 'user' && <>Don't have an account? <Link to="/signup">Create Account / नया खाता बनाएँ</Link></>}
                 </div>
             </div>
         </div>

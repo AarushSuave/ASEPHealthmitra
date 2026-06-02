@@ -12,7 +12,10 @@ export default function AdminPatients() {
         fetch('/api/admin/patients')
             .then(r => r.json())
             .then(data => {
-                setPatients(data || [])
+                const list = Array.isArray(data) ? data : []
+                // Already sorted by backend severity_score, but ensure stable.
+                list.sort((a, b) => (b.severity_score || 0) - (a.severity_score || 0))
+                setPatients(list)
                 setLoading(false)
             })
             .catch(() => setLoading(false))
@@ -50,7 +53,7 @@ export default function AdminPatients() {
                 />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
                 {loading ? <div style={{ opacity: 0.5 }}>Loading patients...</div> : null}
                 {filtered.map(p => (
                     <div 
@@ -67,8 +70,14 @@ export default function AdminPatients() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, opacity: 0.7, marginBottom: 4 }}>
                             <MapPin size={14} /> {p.village || 'Unknown Village'}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, opacity: 0.7 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, opacity: 0.7, marginBottom: 4 }}>
                             <Calendar size={14} /> Age: {p.age} • {p.gender}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 13 }}>
+                            <span style={{ opacity: 0.8 }}>Severity: <strong>{p.severity_score ?? 0}</strong></span>
+                            <span style={{ opacity: 0.8 }}>
+                                Next visit: {p.next_visit ? new Date(p.next_visit).toLocaleDateString() : '—'}
+                            </span>
                         </div>
                     </div>
                 ))}

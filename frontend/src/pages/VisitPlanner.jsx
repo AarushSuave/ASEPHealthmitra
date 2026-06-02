@@ -70,19 +70,19 @@ export default function VisitPlanner() {
     return (
         <div className="animate-in">
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2>Visit Planner</h2>
+                <h2>Visit Planner / विज़िट योजना</h2>
                 <div style={{ display: 'flex', gap: 8, background: 'var(--bg-card)', padding: 4, borderRadius: 12 }}>
                     <button 
                         onClick={() => setActiveTab('upcoming')}
                         style={{ padding: '8px 16px', borderRadius: 8, background: activeTab === 'upcoming' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'upcoming' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                     >
-                        Upcoming
+                        Upcoming / अगली विज़िट
                     </button>
                     <button 
                         onClick={() => setActiveTab('add')}
                         style={{ padding: '8px 16px', borderRadius: 8, background: activeTab === 'add' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'add' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                     >
-                        Add Visit
+                        Add Visit / नई विज़िट
                     </button>
                 </div>
             </div>

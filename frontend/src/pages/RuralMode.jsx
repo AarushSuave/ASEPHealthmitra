@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
     AlertTriangle,
     Bell,
@@ -20,7 +21,10 @@ import {
     TrendingUp,
     Upload,
     UserPlus,
-    Users
+    Users,
+    Brain,
+    HeartPulse,
+    History
 } from 'lucide-react'
 
 const initialPatients = [
@@ -73,7 +77,9 @@ const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'map', label: 'Cluster Map', icon: MapPin },
-    { id: 'visits', label: 'Visits', icon: CalendarDays },
+    { id: 'visits', label: 'Visit Planner', icon: CalendarDays },
+    { id: 'qr', label: 'QR Check-in', icon: QrCode },
+    { id: 'history', label: 'Visit History', icon: History },
     { id: 'camp', label: 'Camp Intake', icon: ClipboardList },
     { id: 'outreach', label: 'Outreach', icon: Megaphone },
 ]
@@ -92,6 +98,7 @@ const sparklinePoints = (values) => {
 }
 
 export default function RuralMode() {
+    const navigate = useNavigate()
     const [patients, setPatients] = useState(initialPatients)
     const [activeTab, setActiveTab] = useState('overview')
     const [search, setSearch] = useState('')
@@ -181,8 +188,23 @@ export default function RuralMode() {
     return (
         <div>
             <div className="page-header">
-                <h2>Rural ASHA Worker Mode</h2>
-                <p>Offline-first village workflow for patient registration, cluster triage, follow-ups, camp intake, and outreach reminders.</p>
+                <h2>OurHealth Mode</h2>
+                <p>Village-first workflow with synced risk predictor, health twin, report scanner, visit planner, QR check-in, and history.</p>
+            </div>
+
+            <div className="grid-3 animate-in" style={{ marginBottom: 16 }}>
+                <button className="glass-card" onClick={() => navigate('/risk')} style={{ textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><Brain size={16} color="#f59e0b" /> Risk Predictor</div>
+                    <div style={{ marginTop: 8, color: 'var(--text-secondary)', fontSize: 13 }}>Review synced risk trends for field patients.</div>
+                </button>
+                <button className="glass-card" onClick={() => navigate('/twin')} style={{ textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><HeartPulse size={16} color="#8b5cf6" /> Health Twin</div>
+                    <div style={{ marginTop: 8, color: 'var(--text-secondary)', fontSize: 13 }}>Use summaries and next-step guidance during outreach.</div>
+                </button>
+                <button className="glass-card" onClick={() => navigate('/report')} style={{ textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><FileText size={16} color="#06b6d4" /> Report Scanner</div>
+                    <div style={{ marginTop: 8, color: 'var(--text-secondary)', fontSize: 13 }}>Scan reports quickly and auto-update patient memory.</div>
+                </button>
             </div>
 
             <div className="glass-card animate-in" style={{ marginBottom: 16 }}>
@@ -232,7 +254,7 @@ export default function RuralMode() {
 
             {showAdd && (
                 <div className="glass-card animate-in" style={{ marginBottom: 16 }}>
-                    <h3 style={{ fontSize: 16, marginBottom: 12 }}>Register New Patient</h3>
+                    <h3 style={{ fontSize: 16, marginBottom: 12 }}>Add Patient To OurHealth</h3>
                     <div className="grid-3" style={{ gap: 12 }}>
                         <input className="form-input" placeholder="Full name" value={newPatient.name} onChange={(event) => updateNewPatient('name', event.target.value)} />
                         <input className="form-input" type="number" placeholder="Age" value={newPatient.age} onChange={(event) => updateNewPatient('age', event.target.value)} />
@@ -285,6 +307,26 @@ export default function RuralMode() {
 
             {activeTab === 'visits' && (
                 <VisitPanel visits={visitQueue} onSchedule={scheduleVisit} expanded />
+            )}
+
+            {activeTab === 'qr' && (
+                <div className="glass-card animate-in">
+                    <h3 style={{ fontSize: 16, marginBottom: 12 }}>QR Check-in</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Use quick check-in from Visit Planner to mark home visits as completed.</p>
+                    <button className="btn btn-primary" onClick={() => navigate('/visits')}>
+                        <QrCode size={16} /> Open QR Scanner
+                    </button>
+                </div>
+            )}
+
+            {activeTab === 'history' && (
+                <div className="glass-card animate-in">
+                    <h3 style={{ fontSize: 16, marginBottom: 12 }}>Previous Visits History</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Track previous visits and follow-up outcomes for each patient.</p>
+                    <button className="btn btn-primary" onClick={() => navigate('/history')}>
+                        <History size={16} /> Open History
+                    </button>
+                </div>
             )}
 
             {activeTab === 'camp' && (

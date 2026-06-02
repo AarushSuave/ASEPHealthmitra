@@ -1,6 +1,7 @@
 """HealthMitra Scan – Auth Router (JWT-based Authentication)"""
 import os
 import json
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
@@ -14,6 +15,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer(auto_error=False)
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+ADMIN_CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / "admin_credentials.txt"
+ASHA_CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / "asha_credentials.txt"
+DEFAULT_ADMIN_EMAIL = "admin@healthmitra.local"
+DEFAULT_ADMIN_PASSWORD = "Admin@123"
+DEFAULT_ASHA_EMAIL = "asha@healthmitra.local"
+DEFAULT_ASHA_PASSWORD = "Asha@123"
 
 
 # ── Helper functions ────────────────────────────────────────────────
@@ -87,6 +94,78 @@ def _user_to_dict(user: User) -> dict:
     }
 
 
+def _ensure_admin_credentials_file() -> tuple[str, str]:
+    """Ensure admin credentials file exists and return email/password."""
+    if not ADMIN_CREDENTIALS_PATH.exists():
+        ADMIN_CREDENTIALS_PATH.write_text(
+            (
+                "# HealthMitra Admin Credentials\n"
+                "# Change these values after first login.\n"
+                f"email={DEFAULT_ADMIN_EMAIL}\n"
+                f"password={DEFAULT_ADMIN_PASSWORD}\n"
+            ),
+            encoding="utf-8"
+        )
+        return DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD
+
+    raw = ADMIN_CREDENTIALS_PATH.read_text(encoding="utf-8")
+    email = ""
+    password = ""
+    for line in raw.splitlines():
+        row = line.strip()
+        if not row or row.startswith("#") or "=" not in row:
+            continue
+        key, value = row.split("=", 1)
+        key = key.strip().lower()
+        value = value.strip()
+        if key == "email":
+            email = value
+        elif key == "password":
+            password = value
+
+    if not email:
+        email = DEFAULT_ADMIN_EMAIL
+    if not password:
+        password = DEFAULT_ADMIN_PASSWORD
+    return email, password
+
+
+def _ensure_asha_credentials_file() -> tuple[str, str]:
+    """Ensure ASHA coordinator credentials file exists and return email/password."""
+    if not ASHA_CREDENTIALS_PATH.exists():
+        ASHA_CREDENTIALS_PATH.write_text(
+            (
+                "# ASHA Coordinator Credentials\n"
+                "# Change these values after first login.\n"
+                f"email={DEFAULT_ASHA_EMAIL}\n"
+                f"password={DEFAULT_ASHA_PASSWORD}\n"
+            ),
+            encoding="utf-8"
+        )
+        return DEFAULT_ASHA_EMAIL, DEFAULT_ASHA_PASSWORD
+
+    raw = ASHA_CREDENTIALS_PATH.read_text(encoding="utf-8")
+    email = ""
+    password = ""
+    for line in raw.splitlines():
+        row = line.strip()
+        if not row or row.startswith("#") or "=" not in row:
+            continue
+        key, value = row.split("=", 1)
+        key = key.strip().lower()
+        value = value.strip()
+        if key == "email":
+            email = value
+        elif key == "password":
+            password = value
+
+    if not email:
+        email = DEFAULT_ASHA_EMAIL
+    if not password:
+        password = DEFAULT_ASHA_PASSWORD
+    return email, password
+
+
 # ── Routes ──────────────────────────────────────────────────────────
 
 @router.post("/register")
@@ -143,6 +222,79 @@ async def login(
         "token": token,
         "user": _user_to_dict(user),
         "message": "Login successful"
+    }
+
+
+@router.post("/admin-login")
+async def admin_login(
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Login to admin panel using credentials from local text file."""
+    expected_email, expected_password = _ensure_admin_credentials_file()
+    if email.strip().lower() != expected_email.strip().lower() or password != expected_password:
+        raise HTTPException(status_code=401, detail="Invalid admin credentials")
+
+    admin_user = db.query(User).filter(User.email == expected_email).first()
+    if not admin_user:
+        admin_user = User(
+            name="Admin User",
+            email=expected_email,
+            password_hash=hash_password(expected_password),
+            role="admin"
+        )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
+    elif admin_user.role != "admin":
+        admin_user.role = "admin"
+        admin_user.password_hash = hash_password(expected_password)
+        db.commit()
+        db.refresh(admin_user)
+
+    token = create_token(admin_user.id)
+    return {
+        "token": token,
+        "user": _user_to_dict(admin_user),
+        "message": "Admin login successful"
+    }
+
+
+@router.post("/asha-login")
+async def asha_login(
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Login as ASHA coordinator using local text credentials."""
+    expected_email, expected_password = _ensure_asha_credentials_file()
+    if email.strip().lower() != expected_email.strip().lower() or password != expected_password:
+        raise HTTPException(status_code=401, detail="Invalid ASHA coordinator credentials")
+
+    asha_user = db.query(User).filter(User.email == expected_email).first()
+    if not asha_user:
+        asha_user = User(
+            name="ASHA Coordinator",
+            email=expected_email,
+            password_hash=hash_password(expected_password),
+            role="asha_coordinator"
+        )
+        db.add(asha_user)
+        db.commit()
+        db.refresh(asha_user)
+    else:
+        if asha_user.role != "asha_coordinator":
+            asha_user.role = "asha_coordinator"
+        asha_user.password_hash = hash_password(expected_password)
+        db.commit()
+        db.refresh(asha_user)
+
+    token = create_token(asha_user.id)
+    return {
+        "token": token,
+        "user": _user_to_dict(asha_user),
+        "message": "ASHA coordinator login successful"
     }
 
 

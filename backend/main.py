@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from database import init_db
 from config import APP_NAME, APP_VERSION, CORS_ORIGINS, UPLOAD_DIR
 
-from routers import reports, risk, patients, dashboard, health_twin, chat, admin, visits
+from routers import reports, risk, patients, dashboard, health_twin, admin, visits
 from routers import auth
 
 from contextlib import asynccontextmanager
@@ -52,7 +52,6 @@ app.include_router(risk.router)
 app.include_router(patients.router)
 app.include_router(dashboard.router)
 app.include_router(health_twin.router)
-app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(visits.router)
 
@@ -67,7 +66,6 @@ def root():
             "reports": "/api/reports",
             "risk": "/api/risk",
             "patients": "/api/patients",
-            "chat": "/api/chat",
         }
     }
 

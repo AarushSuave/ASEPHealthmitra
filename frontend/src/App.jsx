@@ -23,29 +23,29 @@ import AdminPatients from './pages/AdminPatients'
 import healthmitraLogo from './assets/healthmitra-logo.jpeg'
 
 const navItems = [
-    { section: 'Core Features' },
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/report', icon: FileText, label: 'Report Explainer' },
-    { section: 'Health Intelligence' },
-    { path: '/risk', icon: Activity, label: 'Risk Predictor' },
-    { path: '/memory', icon: Clock, label: 'Health Memory' },
-    { path: '/respiratory-faqs', icon: CircleHelp, label: 'Lung FAQs' },
-    { path: '/twin', icon: UserCircle, label: 'AI Health Twin' },
-    { section: 'Special Modes' },
-    { path: '/rural', icon: Users, label: 'Rural ASHA Mode' },
-    { section: 'Visits' },
-    { path: '/visits', icon: Calendar, label: 'Visit Planner' },
-    { path: '/history', icon: History, label: 'Visits History' },
+    { section: 'Core Features / मुख्य सुविधा' },
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard / डैशबोर्ड' },
+    { path: '/report', icon: FileText, label: 'Report Scanner / रिपोर्ट स्कैनर' },
+    { section: 'Health Intelligence / स्वास्थ्य जानकारी' },
+    { path: '/risk', icon: Activity, label: 'Risk Predictor / जोखिम पूर्वानुमान' },
+    { path: '/memory', icon: Clock, label: 'Health Memory / स्वास्थ्य यादें' },
+    { path: '/respiratory-faqs', icon: CircleHelp, label: 'FAQs / सवाल-जवाब' },
+    { path: '/twin', icon: UserCircle, label: 'Health Twin / स्वास्थ्य ट्विन' },
+    { section: 'Special Modes / विशेष मोड' },
+    { path: '/rural', icon: Users, label: 'OurHealth Mode / औरहेल्थ' },
+    { section: 'Visits / मुलाक़ातें' },
+    { path: '/visits', icon: Calendar, label: 'Visit Planner / विज़िट योजना' },
+    { path: '/history', icon: History, label: 'Visits History / पिछली विज़िट' },
 ]
 
 const pageTitles = {
     '/': 'OurHealth Dashboard',
-    '/report': 'Medical Report Explainer',
+    '/report': 'Medical Report Scanner',
     '/risk': 'Future Risk Predictor',
     '/memory': 'Health Memory',
-    '/respiratory-faqs': 'Breathing And Lung FAQs',
-    '/twin': 'AI Health Twin',
-    '/rural': 'Rural ASHA Worker Mode',
+    '/respiratory-faqs': 'FAQs',
+    '/twin': 'Health Twin',
+    '/rural': 'OurHealth Mode',
     '/profile': 'My Profile',
     '/visits': 'Visit Planner',
     '/history': 'Previous Visits History',
@@ -104,6 +104,19 @@ export default function App() {
                     <Route path="*" element={<Navigate to="/admin" replace />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/admin" replace />} />
+            </Routes>
+        )
+    }
+
+    if (user?.role === 'asha_coordinator') {
+        // ASHA coordinators land directly in OurHealth / rural workflow
+        return (
+            <Routes>
+                <Route path="/*" element={
+                    <ProtectedRoute>
+                        <RuralMode />
+                    </ProtectedRoute>
+                } />
             </Routes>
         )
     }

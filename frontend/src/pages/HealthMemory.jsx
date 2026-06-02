@@ -8,6 +8,7 @@ export default function HealthMemory() {
     const [timeline, setTimeline] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')
+    const [query, setQuery] = useState('')
 
     useEffect(() => {
         const fetchTimeline = async () => {
@@ -26,7 +27,14 @@ export default function HealthMemory() {
         fetchTimeline()
     }, [])
 
-    const filtered = filter === 'all' ? timeline : timeline.filter(t => t.event_type === filter)
+    const filtered = timeline
+        .filter(t => filter === 'all' || t.event_type === filter)
+        .filter(t => {
+            if (!query.trim()) return true
+            const haystack = `${t.title || ''} ${t.description || ''}`.toLowerCase()
+            return haystack.includes(query.trim().toLowerCase())
+        })
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
     const stats = {
         reports: timeline.filter(t => t.event_type === 'report').length,
@@ -40,8 +48,17 @@ export default function HealthMemory() {
     return (
         <div>
             <div className="page-header">
-                <h2>📅 Health Memory</h2>
-                <p>Your complete health timeline – all reports, scans, and assessments stored locally</p>
+                <h2>📅 Health Memory / स्वास्थ्य यादें</h2>
+                <p>Your complete health timeline with quick filters and search for easier follow-up (अनुवर्ती के लिए पूरी स्वास्थ्य कहानी).</p>
+            </div>
+
+            <div className="glass-card animate-in" style={{ marginBottom: 16 }}>
+                <input
+                    className="form-input"
+                    placeholder="Search by symptom, finding, or event title..."
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                />
             </div>
 
             {/* Stats */}
@@ -79,7 +96,7 @@ export default function HealthMemory() {
                         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
                             <Clock size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
                             <p>No health events found.</p>
-                            <p style={{ fontSize: 13, marginTop: 4 }}>Reports and scans will appear here once processed.</p>
+                            <p style={{ fontSize: 13, marginTop: 4 }}>Try changing filters or scanning a new report to populate memory.</p>
                         </div>
                     ) : (
                         filtered.map((item) => {

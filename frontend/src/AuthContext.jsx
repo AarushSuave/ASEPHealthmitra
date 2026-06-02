@@ -46,12 +46,21 @@ export function AuthProvider({ children }) {
         setLoading(false)
     }
 
-    const login = async (email, password) => {
+    const login = async (email, password, mode = 'user') => {
         const formData = new FormData()
         formData.append('email', email)
         formData.append('password', password)
 
-        const res = await fetch('/api/auth/login', { method: 'POST', body: formData })
+        let endpoint = '/api/auth/login'
+        if (mode === 'admin') endpoint = '/api/auth/admin-login'
+        if (mode === 'asha') endpoint = '/api/auth/asha-login'
+
+        const res = await fetch(endpoint, { method: 'POST', body: formData })
+
+        if ((mode === 'admin' || mode === 'asha') && res.status === 404) {
+            throw new Error('Special login endpoint not found. Restart backend (run.bat) and try again.')
+        }
+
         const data = await readApiResponse(res, 'Backend is not responding. Start run.bat and try again.')
 
         if (!res.ok) throw new Error(data.detail || 'Login failed')
@@ -81,6 +90,7 @@ export function AuthProvider({ children }) {
 
     const logout = () => {
         localStorage.removeItem('hm_token')
+        localStorage.removeItem('hm_login_mode')
         setToken(null)
         setUser(null)
     }
