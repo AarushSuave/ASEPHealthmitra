@@ -152,7 +152,21 @@ echo.
 echo [6/7] Checking optional local tools...
 where tesseract >nul 2>&1
 if errorlevel 1 (
-    echo [WARN] Tesseract OCR not found in PATH. OCR still runs for structured PDFs, but scanned images need Tesseract.
+    echo [INFO] Tesseract OCR not found. Report Scanner needs it for scanned images.
+    echo [INFO] Install command ^(downloads on this device only, not stored in the repo^):
+    echo   winget install --id UB-Mannheim.TesseractOCR -e --accept-package-agreements --accept-source-agreements
+    where winget >nul 2>&1
+    if not errorlevel 1 (
+        echo [SETUP] Running winget Tesseract install...
+        winget install --id UB-Mannheim.TesseractOCR -e --accept-package-agreements --accept-source-agreements
+        if errorlevel 1 (
+            echo [WARN] winget install failed. Run the command above manually as Administrator.
+        ) else (
+            echo [OK] Tesseract install finished. Restart the terminal if OCR still fails.
+        )
+    ) else (
+        echo [WARN] winget not available. Install Tesseract manually or add tesseract.exe to PATH.
+    )
 ) else (
     echo [OK] Tesseract OCR found.
 )

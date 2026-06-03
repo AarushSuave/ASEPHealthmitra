@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { clearHealthSync } from './utils/healthSync'
 
 const AuthContext = createContext(null)
 
@@ -20,6 +21,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
     const [token, setToken] = useState(localStorage.getItem('hm_token'))
     const [loading, setLoading] = useState(true)
+    const previousUserId = useRef(null)
 
     useEffect(() => {
         if (token) {
@@ -37,6 +39,7 @@ export function AuthProvider({ children }) {
             if (res.ok) {
                 const data = await readApiResponse(res, 'Could not read profile. Please restart the backend.')
                 setUser(data)
+                previousUserId.current = data.id ?? null
             } else {
                 logout()
             }
@@ -64,9 +67,14 @@ export function AuthProvider({ children }) {
 
         if (!res.ok) throw new Error(data.detail || 'Login failed')
 
+        if (previousUserId.current && previousUserId.current !== data.user?.id) {
+            clearHealthSync(previousUserId.current)
+        }
+        localStorage.removeItem('hm_health_sync')
         localStorage.setItem('hm_token', data.token)
         setToken(data.token)
         setUser(data.user)
+        previousUserId.current = data.user?.id ?? null
         return data
     }
 
@@ -81,17 +89,22 @@ export function AuthProvider({ children }) {
 
         if (!res.ok) throw new Error(data.detail || 'Registration failed')
 
+        localStorage.removeItem('hm_health_sync')
         localStorage.setItem('hm_token', data.token)
         setToken(data.token)
         setUser(data.user)
+        previousUserId.current = data.user?.id ?? null
         return data
     }
 
     const logout = () => {
+        if (user?.id) clearHealthSync(user.id)
         localStorage.removeItem('hm_token')
         localStorage.removeItem('hm_login_mode')
+        localStorage.removeItem('hm_health_sync')
         setToken(null)
         setUser(null)
+        previousUserId.current = null
     }
 
     const updateProfile = async (fields) => {

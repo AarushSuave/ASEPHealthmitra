@@ -1,10 +1,13 @@
 import { useState, useRef } from 'react'
+import { useAuth } from '../AuthContext'
+import { saveLatestReport } from '../utils/healthSync'
 import {
     Upload, FileText, AlertTriangle, CheckCircle, Languages, Activity,
     ChevronDown, ChevronUp, Info, ShieldCheck, HeartPulse, List
 } from 'lucide-react'
 
 export default function ReportExplainer() {
+    const { user } = useAuth()
     const [file, setFile] = useState(null)
     const [loading, setLoading] = useState(false)
     const [result, setResult] = useState(null)
@@ -29,7 +32,7 @@ export default function ReportExplainer() {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('language', language)
-        formData.append('patient_id', 1) // Default for demo
+        if (user?.id) formData.append('patient_id', String(user.id))
 
         try {
             const res = await fetch('/api/reports/upload', { method: 'POST', body: formData })
@@ -38,6 +41,13 @@ export default function ReportExplainer() {
                 throw new Error(data.detail || `Server error: ${res.status}`)
             }
             setResult(data)
+            if (user?.id) saveLatestReport(user.id, {
+                filename: file.name,
+                report: data.report,
+                risk_score: data.report?.risk_scores?.cardiovascular?.score,
+                risk_level: data.report?.risk_scores?.cardiovascular?.level,
+                explanation_en: data.explanation_en,
+            })
         } catch (err) {
             console.error('Report upload failed:', err)
             setError(err.message || 'Processing failed. Please check the backend connection.')

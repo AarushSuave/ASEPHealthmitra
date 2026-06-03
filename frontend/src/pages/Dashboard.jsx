@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
-import { FileText, Activity, Users, Clock, Heart, Stethoscope, Calendar } from 'lucide-react'
+import { FileText, Activity, Clock, Stethoscope, Calendar, UserCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
+import { getHealthSync } from '../utils/healthSync'
 
 const quickActions = [
     { icon: FileText, label: 'Scan Report / रिपोर्ट स्कैन', path: '/report', color: '#06b6d4' },
     { icon: Activity, label: 'Risk Check / जोखिम जांच', path: '/risk', color: '#f59e0b' },
-    { icon: Users, label: 'OurHealth / गांव कार्य', path: '/rural', color: '#ec4899' },
+    { icon: UserCircle, label: 'Health Twin / स्वास्थ्य ट्विन', path: '/twin', color: '#8b5cf6' },
     { icon: Calendar, label: 'Visit Planner / विज़िट योजना', path: '/visits', color: '#3b82f6' },
 ]
 
 export default function Dashboard() {
     const navigate = useNavigate()
+    const { user, token } = useAuth()
     const [stats, setStats] = useState([
-        { icon: '📄', label: 'Reports Analyzed', value: '0', color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
-        { icon: '👥', label: 'Patients (Rural)', value: '0', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+        { icon: '📄', label: 'Reports Scanned', value: '0', color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
+        { icon: '📊', label: 'Latest Risk', value: '—', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
     ])
     const [activities, setActivities] = useState([])
     const [loading, setLoading] = useState(true)
@@ -21,16 +24,20 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
+                const headers = token ? { Authorization: `Bearer ${token}` } : {}
                 const [statsRes, activityRes] = await Promise.all([
-                    fetch('/api/dashboard/stats'),
-                    fetch('/api/dashboard/activity')
+                    fetch('/api/dashboard/stats', { headers }),
+                    fetch('/api/dashboard/activity', { headers }),
                 ])
 
+                const sync = user?.id ? getHealthSync(user.id) : {}
+                const hs = user?.health_stats || {}
                 if (statsRes.ok) {
                     const data = await statsRes.json()
-                    setStats(prev => [
-                        { ...prev[0], value: data.reports.toString() },
-                        { ...prev[1], value: data.patients.toString() },
+                    const riskVal = hs.combined_risk ?? hs.latest_risk_score ?? sync.risk?.combined_risk ?? sync.latestReport?.risk_score
+                    setStats([
+                        { icon: '📄', label: 'Reports Scanned', value: String(data.reports ?? hs.total_reports ?? 0), color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
+                        { icon: '📊', label: 'Latest Risk', value: riskVal != null ? `${Math.round(riskVal)}%` : '—', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
                     ])
                 }
 
@@ -46,7 +53,7 @@ export default function Dashboard() {
         }
 
         fetchDashboardData()
-    }, [])
+    }, [user, token])
 
     const formatTime = (isoString) => {
         if (!isoString) return ''
@@ -71,7 +78,7 @@ export default function Dashboard() {
                             🏥 Welcome to HealthMitra Scan / हेल्थमित्र
                         </h2>
                         <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
-                            Scan reports, predict health risks, plan village visits, and track your health profile in one place.
+                            Scan reports, predict health risks, and sync everything to your Health Twin automatically.
                         </p>
                     </div>
                     <div style={{ fontSize: 64, opacity: 0.3 }}>

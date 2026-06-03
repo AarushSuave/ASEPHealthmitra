@@ -21,6 +21,8 @@ class User(Base):
     allergies = Column(Text)  # JSON: ["peanuts", "penicillin"]
     emergency_contact = Column(String(100))
     village = Column(String(100))
+    height_cm = Column(Float)
+    weight_kg = Column(Float)
     role = Column(String(20), default='user')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -28,6 +30,24 @@ class User(Base):
     reports = relationship("MedicalReport", back_populates="user")
     timeline = relationship("HealthTimeline", back_populates="user")
     visits = relationship("Visit", back_populates="user")
+    family_links = relationship(
+        "FamilyLink",
+        foreign_keys="FamilyLink.user_id",
+        back_populates="user",
+    )
+
+
+class FamilyLink(Base):
+    __tablename__ = "family_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    linked_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    relation = Column(String(50), default="family")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", foreign_keys=[user_id], back_populates="family_links")
+
 
 class Visit(Base):
     __tablename__ = "visits"
@@ -39,6 +59,8 @@ class Visit(Base):
     visit_date = Column(DateTime)
     purpose = Column(String(255))
     status = Column(String(20), default='scheduled') # scheduled, completed, cancelled
+    check_in_code = Column(String(8))
+    checked_in_at = Column(DateTime)
     notes = Column(Text)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -50,6 +72,7 @@ class Patient(Base):
     __tablename__ = "patients"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=True, index=True)
     name = Column(String(100), nullable=False)
     age = Column(Integer)
     gender = Column(String(10))

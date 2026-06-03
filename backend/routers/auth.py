@@ -6,7 +6,8 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, MedicalReport
+from models import User, MedicalReport, HealthTimeline
+from services.patient_sync import ensure_patient_for_user, sync_user_profile_fields
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRY_HOURS, PROFILE_PHOTO_DIR
 
 import bcrypt
@@ -90,6 +91,8 @@ def _user_to_dict(user: User) -> dict:
         "allergies": json.loads(user.allergies) if user.allergies else [],
         "emergency_contact": user.emergency_contact,
         "village": user.village,
+        "height_cm": user.height_cm,
+        "weight_kg": user.weight_kg,
         "role": user.role,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
@@ -171,6 +174,7 @@ async def register(
     db.add(user)
     db.commit()
     db.refresh(user)
+    ensure_patient_for_user(db, user)
 
     token = create_token(user.id)
     return {
@@ -206,6 +210,8 @@ async def login(
             user.password_hash = hash_password(file_password)
             db.commit()
             db.refresh(user)
+        if user.role == "user":
+            ensure_patient_for_user(db, user)
         token = create_token(user.id)
         return {
             "token": token,
@@ -216,6 +222,9 @@ async def login(
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if user.role == "user":
+        ensure_patient_for_user(db, user)
 
     token = create_token(user.id)
     return {
@@ -273,10 +282,33 @@ async def get_profile(user: User = Depends(get_current_user), db: Session = Depe
     ).order_by(MedicalReport.created_at.desc()).first()
 
     profile = _user_to_dict(user)
+    latest_vitals = db.query(HealthTimeline).filter(
+        HealthTimeline.user_id == user.id,
+        HealthTimeline.event_type == "vitals",
+    ).order_by(HealthTimeline.created_at.desc()).first()
+
+    diabetes_risk = None
+    heart_risk = None
+    combined_risk = None
+    if latest_vitals and latest_vitals.data_json:
+        try:
+            vd = json.loads(latest_vitals.data_json)
+            diabetes_risk = vd.get("diabetes_risk")
+            heart_risk = vd.get("heart_risk")
+            combined_risk = vd.get("combined_risk") or (
+                round((diabetes_risk + heart_risk) / 2) if diabetes_risk is not None and heart_risk is not None else None
+            )
+        except Exception:
+            pass
+
     profile["health_stats"] = {
         "total_reports": report_count,
-        "latest_risk_score": latest_report.risk_score if latest_report else None,
+        "latest_risk_score": latest_report.risk_score if latest_report else combined_risk,
         "latest_risk_level": latest_report.risk_level if latest_report else None,
+        "latest_report_filename": latest_report.filename if latest_report else None,
+        "diabetes_risk": diabetes_risk,
+        "heart_risk": heart_risk,
+        "combined_risk": combined_risk,
     }
     return profile
 
@@ -292,6 +324,8 @@ async def update_profile(
     allergies: str = Form(None),
     emergency_contact: str = Form(None),
     village: str = Form(None),
+    height_cm: float = Form(None),
+    weight_kg: float = Form(None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -314,9 +348,15 @@ async def update_profile(
         user.emergency_contact = emergency_contact
     if village is not None:
         user.village = village
+    if height_cm is not None:
+        user.height_cm = height_cm
+    if weight_kg is not None:
+        user.weight_kg = weight_kg
 
     db.commit()
     db.refresh(user)
+    if user.role == "user":
+        sync_user_profile_fields(db, user)
     return {"user": _user_to_dict(user), "message": "Profile updated successfully"}
 
 

@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
 import { MapPin, Users, Activity } from 'lucide-react'
+import { useAuth } from '../AuthContext'
 
 export default function AdminVillages() {
+    const { token } = useAuth()
     const [villages, setVillages] = useState([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/admin/villages')
+        if (!token) return
+        fetch('/api/admin/villages', { headers: { Authorization: `Bearer ${token}` } })
             .then(r => r.json())
             .then(data => {
                 setVillages(data || [])
                 setLoading(false)
             })
             .catch(() => setLoading(false))
-    }, [])
+    }, [token])
 
     return (
         <div className="animate-in">

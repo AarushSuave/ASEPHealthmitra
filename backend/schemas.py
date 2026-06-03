@@ -54,6 +54,8 @@ class ReportResponse(BaseModel):
 class VitalsInput(BaseModel):
     age: int
     gender: str
+    height: Optional[float] = None
+    weight: Optional[float] = None
     bmi: Optional[float] = None
     blood_pressure_systolic: Optional[int] = None
     blood_pressure_diastolic: Optional[int] = None

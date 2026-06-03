@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Calendar, QrCode, MapPin, User, CheckCircle } from 'lucide-react'
+import { Calendar, KeyRound, MapPin, User, CheckCircle, AlertCircle } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 
 export default function VisitPlanner() {
     const { token, user } = useAuth()
     const [visits, setVisits] = useState([])
     const [loading, setLoading] = useState(true)
-    const [showScanner, setShowScanner] = useState(false)
-    const [scanResult, setScanResult] = useState(null)
     const [activeTab, setActiveTab] = useState('upcoming')
+    const [checkInVisitId, setCheckInVisitId] = useState(null)
+    const [checkInCode, setCheckInCode] = useState('')
+    const [checkInError, setCheckInError] = useState('')
+    const [checkInSuccess, setCheckInSuccess] = useState(false)
+    const [submitting, setSubmitting] = useState(false)
 
     const [date, setDate] = useState('')
     const [purpose, setPurpose] = useState('')
@@ -17,14 +20,14 @@ export default function VisitPlanner() {
     const profileVillage = user?.village || ''
 
     useEffect(() => {
-        fetchVisits()
-    }, [])
+        if (token) fetchVisits()
+    }, [token])
 
     const fetchVisits = () => {
-        fetch('/api/visits/', { headers: { 'Authorization': `Bearer ${token}` }})
+        fetch('/api/visits/', { headers: { Authorization: `Bearer ${token}` } })
             .then(r => r.json())
             .then(data => {
-                setVisits(data || [])
+                setVisits(Array.isArray(data) ? data : [])
                 setLoading(false)
             })
             .catch(() => setLoading(false))
@@ -41,12 +44,12 @@ export default function VisitPlanner() {
             village_name: profileVillage,
             visit_date: new Date(date).toISOString(),
             purpose: purpose,
-            notes: ''
+            notes: '',
         }
         await fetch('/api/visits/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload),
         })
         setDate('')
         setPurpose('')
@@ -54,21 +57,42 @@ export default function VisitPlanner() {
         fetchVisits()
     }
 
-    const mockScan = (visitId) => {
-        setScanResult('Scanning...')
-        setTimeout(() => {
-            fetch(`/api/visits/${visitId}/complete`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            }).then(() => {
-                setScanResult('Check-in Successful!')
-                setTimeout(() => {
-                    setShowScanner(false)
-                    setScanResult(null)
-                    fetchVisits()
-                }, 2000)
+    const openCheckIn = (visitId) => {
+        setCheckInVisitId(visitId)
+        setCheckInCode('')
+        setCheckInError('')
+        setCheckInSuccess(false)
+    }
+
+    const submitCheckIn = async (e) => {
+        e.preventDefault()
+        if (!checkInCode.trim()) {
+            setCheckInError('Enter the code given by hospital staff.')
+            return
+        }
+        setSubmitting(true)
+        setCheckInError('')
+        try {
+            const res = await fetch(`/api/visits/${checkInVisitId}/check-in`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code: checkInCode.trim() }),
             })
-        }, 1500)
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.detail || 'Check-in failed')
+            setCheckInSuccess(true)
+            setTimeout(() => {
+                setCheckInVisitId(null)
+                setCheckInSuccess(false)
+                fetchVisits()
+            }, 2000)
+        } catch (err) {
+            setCheckInError(err.message)
+        }
+        setSubmitting(false)
     }
 
     const upcomingVisits = visits.filter(v => v.status === 'scheduled')
@@ -112,14 +136,17 @@ export default function VisitPlanner() {
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> {new Date(v.visit_date).toLocaleString()}</span>
                                 </div>
                                 <div style={{ marginTop: 8, fontSize: 14, color: 'var(--text-primary)' }}>Purpose: {v.purpose}</div>
+                                <p style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+                                    At the hospital, enter the check-in code given to you by staff (shown in OurHealth Admin).
+                                </p>
                             </div>
                             <button
-                                onClick={() => { setShowScanner(true); mockScan(v.id); }}
+                                onClick={() => openCheckIn(v.id)}
                                 className="btn btn-primary"
                                 style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                             >
-                                <QrCode size={18} />
-                                QR Check-in
+                                <KeyRound size={18} />
+                                Enter Check-in Code
                             </button>
                         </div>
                     ))}
@@ -155,21 +182,53 @@ export default function VisitPlanner() {
                 </div>
             )}
 
-            {showScanner && (
+            {checkInVisitId && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                     background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
                 }}>
                     <div style={{
-                        background: 'var(--bg-card)', padding: 40, borderRadius: 24, textAlign: 'center',
-                        border: '1px solid var(--border-glass)', width: '90%', maxWidth: 400
+                        background: 'var(--bg-card)', padding: 32, borderRadius: 24,
+                        border: '1px solid var(--border-glass)', width: '90%', maxWidth: 400,
                     }}>
-                        <QrCode size={64} style={{ marginBottom: 24, color: 'var(--accent-teal)' }} />
-                        <h3 style={{ fontSize: 20, marginBottom: 16 }}>
-                            {scanResult || 'Align QR Code within frame'}
-                        </h3>
-                        {scanResult === 'Check-in Successful!' && <CheckCircle size={48} color="#10b981" style={{ margin: '0 auto' }} />}
+                        {checkInSuccess ? (
+                            <div style={{ textAlign: 'center' }}>
+                                <CheckCircle size={48} color="#10b981" style={{ margin: '0 auto 16px' }} />
+                                <h3>Check-in successful!</h3>
+                            </div>
+                        ) : (
+                            <form onSubmit={submitCheckIn}>
+                                <KeyRound size={40} style={{ marginBottom: 16, color: 'var(--accent-teal)' }} />
+                                <h3 style={{ fontSize: 20, marginBottom: 8 }}>Hospital Check-in</h3>
+                                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                                    Enter the 8-character code from the admin desk.
+                                </p>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={checkInCode}
+                                    onChange={e => setCheckInCode(e.target.value.toUpperCase())}
+                                    placeholder="e.g. A1B2C3D4"
+                                    maxLength={8}
+                                    autoFocus
+                                    style={{ letterSpacing: 4, textAlign: 'center', fontWeight: 700, fontSize: 18 }}
+                                />
+                                {checkInError && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, color: '#ef4444', fontSize: 13 }}>
+                                        <AlertCircle size={16} /> {checkInError}
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                                    <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setCheckInVisitId(null)}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>
+                                        {submitting ? 'Verifying...' : 'Check in'}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 </div>
             )}

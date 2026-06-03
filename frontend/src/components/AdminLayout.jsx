@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { Map, Users, Database, LogOut } from 'lucide-react'
+import { Map, Users, Database, LogOut, Calendar } from 'lucide-react'
 
 const adminNavItems = [
     { path: '/admin', icon: Map, label: 'Cluster Map' },
+    { path: '/admin/appointments', icon: Calendar, label: 'Appointments' },
     { path: '/admin/villages', icon: Users, label: 'Village Stats' },
     { path: '/admin/patients', icon: Database, label: 'Patient Database' },
 ]

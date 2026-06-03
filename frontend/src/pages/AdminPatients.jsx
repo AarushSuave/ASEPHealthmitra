@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Search, Activity, Phone, MapPin, Droplets, Calendar } from 'lucide-react'
+import { Search, Calendar, MapPin } from 'lucide-react'
+import { useAuth } from '../AuthContext'
 
 export default function AdminPatients() {
+    const { token } = useAuth()
     const [patients, setPatients] = useState([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
@@ -9,7 +11,8 @@ export default function AdminPatients() {
     const [patientDetails, setPatientDetails] = useState(null)
 
     useEffect(() => {
-        fetch('/api/admin/patients')
+        if (!token) return
+        fetch('/api/admin/patients', { headers: { Authorization: `Bearer ${token}` } })
             .then(r => r.json())
             .then(data => {
                 const list = Array.isArray(data) ? data : []
@@ -19,7 +22,7 @@ export default function AdminPatients() {
                 setLoading(false)
             })
             .catch(() => setLoading(false))
-    }, [])
+    }, [token])
 
     const handlePatientClick = (patient) => {
         setSelectedPatient(patient)
@@ -104,6 +107,7 @@ export default function AdminPatients() {
                             <div><span style={{ opacity: 0.6 }}>Village:</span> {selectedPatient.village}</div>
                             <div><span style={{ opacity: 0.6 }}>Phone:</span> {selectedPatient.phone || 'N/A'}</div>
                             <div><span style={{ opacity: 0.6 }}>Blood:</span> {selectedPatient.blood_group || 'N/A'}</div>
+                            <div style={{ gridColumn: '1 / -1' }}><span style={{ opacity: 0.6 }}>Email:</span> {selectedPatient.email || patientDetails?.email || 'N/A'}</div>
                         </div>
 
                         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20 }}>
@@ -121,6 +125,19 @@ export default function AdminPatients() {
                                 </div>
                             ) : (
                                 <div style={{ opacity: 0.5 }}>Loading health data...</div>
+                            )}
+                            {patientDetails?.upcoming_visits?.length > 0 && (
+                                <div style={{ marginTop: 20 }}>
+                                    <h4 style={{ fontSize: 14, marginBottom: 8 }}>Upcoming visits</h4>
+                                    {patientDetails.upcoming_visits.map(v => (
+                                        <div key={v.id} style={{ padding: 10, background: 'rgba(0,0,0,0.2)', borderRadius: 8, marginBottom: 8, fontSize: 13 }}>
+                                            <div>{v.visit_date ? new Date(v.visit_date).toLocaleString() : '—'} — {v.purpose}</div>
+                                            <div style={{ marginTop: 4, fontFamily: 'monospace', fontWeight: 700, color: '#34d399' }}>
+                                                Code: {v.check_in_code || '—'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
 

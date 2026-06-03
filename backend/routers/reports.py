@@ -9,6 +9,8 @@ from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
 from models import MedicalReport, HealthTimeline
+from routers.auth import get_optional_user
+from services.patient_sync import ensure_patient_for_user
 from services.ocr_service import extract_text_from_file
 from services.llm_service import explain_report
 from services.alert_service import check_emergency_from_text
@@ -26,6 +28,7 @@ async def upload_report(
     file: UploadFile = File(...),
     patient_id: int = Form(None),
     language: str = Form("en"),
+    current_user=Depends(get_optional_user),
 ):
     """Upload a medical report (PDF/image), extract text via OCR, and explain it."""
     try:
@@ -64,8 +67,18 @@ async def upload_report(
         # Save to database
         db = SessionLocal()
         try:
+            linked_user_id = None
+            linked_patient_id = patient_id
+            if current_user:
+                patient_row = ensure_patient_for_user(db, current_user)
+                linked_user_id = current_user.id
+                linked_patient_id = patient_row.id
+            elif patient_id:
+                linked_patient_id = patient_id
+
             report = MedicalReport(
-                user_id=patient_id, # Mapping patient_id from form to user_id for simplicity or as allowed
+                user_id=linked_user_id,
+                patient_id=linked_patient_id,
                 filename=file.filename,
                 ocr_text=ocr_result["ocr_text"],
                 explanation_en=explanation_en,
@@ -82,7 +95,8 @@ async def upload_report(
 
             # Add to health timeline
             timeline_entry = HealthTimeline(
-                user_id=patient_id,
+                user_id=linked_user_id,
+                patient_id=linked_patient_id,
                 event_type="report",
                 title=f"Medical Analysis: {file.filename}",
                 description=f"Confidence: {ocr_result['confidence']*100}% | Risk: {ocr_result['risk_level'].title()}",
@@ -117,10 +131,16 @@ async def upload_report(
 
 
 @router.get("/history")
-def get_report_history(patient_id: int = None, db: Session = Depends(get_db)):
-    """Get report history, optionally filtered by patient."""
+def get_report_history(
+    patient_id: int = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_optional_user),
+):
+    """Get report history for the current user or a specific patient."""
     query = db.query(MedicalReport)
-    if patient_id:
+    if current_user:
+        query = query.filter(MedicalReport.user_id == current_user.id)
+    elif patient_id:
         query = query.filter(MedicalReport.patient_id == patient_id)
     reports = query.order_by(MedicalReport.created_at.desc()).limit(50).all()
 

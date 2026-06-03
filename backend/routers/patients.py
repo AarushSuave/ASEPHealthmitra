@@ -2,8 +2,9 @@
 import json
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from database import get_db
-from models import Patient, MedicalReport, HealthTimeline
+from models import Patient, MedicalReport, HealthTimeline, Visit, User
 from schemas import PatientCreate
 
 router = APIRouter(prefix="/api/patients", tags=["Patients"])
@@ -42,7 +43,9 @@ def list_patients(asha_worker_id: str = None, db: Session = Depends(get_db)):
         "gender": p.gender,
         "blood_group": p.blood_group,
         "village": p.village,
-        "report_count": len(p.reports)
+        "report_count": db.query(MedicalReport).filter(
+            or_(MedicalReport.patient_id == p.id, MedicalReport.user_id == p.user_id)
+        ).count() if p.user_id else db.query(MedicalReport).filter(MedicalReport.patient_id == p.id).count(),
     } for p in patients]
 
 
@@ -53,15 +56,32 @@ def get_patient(patient_id: int, db: Session = Depends(get_db)):
     if not patient:
         return {"error": "Patient not found"}
 
-    reports = db.query(MedicalReport).filter(MedicalReport.patient_id == patient_id).all()
+    report_filters = [MedicalReport.patient_id == patient_id]
+    if patient.user_id:
+        report_filters.append(MedicalReport.user_id == patient.user_id)
+    reports = db.query(MedicalReport).filter(or_(*report_filters)).all()
+
+    timeline_filters = [HealthTimeline.patient_id == patient_id]
+    if patient.user_id:
+        timeline_filters.append(HealthTimeline.user_id == patient.user_id)
     timeline = db.query(HealthTimeline).filter(
-        HealthTimeline.patient_id == patient_id
+        or_(*timeline_filters)
     ).order_by(HealthTimeline.created_at.desc()).limit(20).all()
+
+    upcoming = db.query(Visit).filter(
+        Visit.user_id == patient.user_id,
+        Visit.status == "scheduled",
+    ).order_by(Visit.visit_date.asc()).all() if patient.user_id else []
 
     avg_risk = sum(r.risk_score for r in reports if r.risk_score) / max(len(reports), 1)
 
+    linked_email = None
+    if patient.user_id:
+        linked_email = db.query(User.email).filter(User.id == patient.user_id).scalar()
+
     return {
         "id": patient.id,
+        "email": linked_email,
         "name": patient.name,
         "age": patient.age,
         "gender": patient.gender,
@@ -70,6 +90,13 @@ def get_patient(patient_id: int, db: Session = Depends(get_db)):
         "phone": patient.phone,
         "report_count": len(reports),
         "avg_risk_score": round(avg_risk, 1),
+        "upcoming_visits": [{
+            "id": v.id,
+            "visit_date": v.visit_date.isoformat() if v.visit_date else None,
+            "purpose": v.purpose,
+            "check_in_code": v.check_in_code,
+            "village_name": v.village_name,
+        } for v in upcoming],
         "timeline": [{
             "id": t.id,
             "event_type": t.event_type,

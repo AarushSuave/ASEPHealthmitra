@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from database import init_db
 from config import APP_NAME, APP_VERSION, CORS_ORIGINS, UPLOAD_DIR
 
-from routers import reports, risk, patients, dashboard, health_twin, admin, visits
+from routers import reports, risk, patients, dashboard, health_twin, admin, visits, ourhealth, family
 from routers import auth
 
 from contextlib import asynccontextmanager
@@ -54,6 +54,8 @@ app.include_router(dashboard.router)
 app.include_router(health_twin.router)
 app.include_router(admin.router)
 app.include_router(visits.router)
+app.include_router(ourhealth.router)
+app.include_router(family.router)
 
 
 @app.get("/")

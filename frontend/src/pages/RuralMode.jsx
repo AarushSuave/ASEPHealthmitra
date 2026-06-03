@@ -15,67 +15,10 @@ import {
     UserPlus,
     Users,
     History,
-    LogOut
+    LogOut,
+    RefreshCw
 } from 'lucide-react'
 import { useAuth } from '../AuthContext'
-
-const initialPatients = [
-    {
-        id: 1, name: 'Ramesh Kumar', age: 45, gender: 'Male', blood_group: 'B+', village: 'Chandpur', phone: '9876543210',
-        report_count: 3, risk: 78, riskHistory: [52, 58, 63, 70, 78], lastVisit: '2026-04-26', scheduledVisit: '2026-05-02',
-        householdId: 'HH-CH-101', pendingReports: 1, followupStatus: 'overdue', flags: ['pneumonia']
-    },
-    {
-        id: 2, name: 'Sunita Devi', age: 38, gender: 'Female', blood_group: 'O+', village: 'Chandpur', phone: '9988776655',
-        report_count: 2, risk: 35, riskHistory: [42, 39, 37, 33, 35], lastVisit: '2026-04-22', scheduledVisit: '2026-05-03',
-        householdId: 'HH-CH-101', pendingReports: 0, followupStatus: 'scheduled', flags: []
-    },
-    {
-        id: 3, name: 'Mohan Lal', age: 62, gender: 'Male', blood_group: 'A+', village: 'Ramgarh', phone: '9123456701',
-        report_count: 5, risk: 65, riskHistory: [54, 57, 60, 63, 65], lastVisit: '2026-04-18', scheduledVisit: '2026-04-25',
-        householdId: 'HH-RG-122', pendingReports: 2, followupStatus: 'overdue', flags: ['fracture']
-    },
-    {
-        id: 4, name: 'Geeta Bai', age: 55, gender: 'Female', blood_group: 'B-', village: 'Ramgarh', phone: '9765432111',
-        report_count: 1, risk: 42, riskHistory: [44, 43, 41, 40, 42], lastVisit: '2026-04-27', scheduledVisit: '2026-05-01',
-        householdId: 'HH-RG-122', pendingReports: 0, followupStatus: 'scheduled', flags: []
-    },
-    {
-        id: 5, name: 'Raju Singh', age: 28, gender: 'Male', blood_group: 'AB+', village: 'Devpur', phone: '9345678910',
-        report_count: 1, risk: 15, riskHistory: [26, 22, 20, 17, 15], lastVisit: '2026-04-24', scheduledVisit: '2026-05-05',
-        householdId: 'HH-DP-144', pendingReports: 0, followupStatus: 'scheduled', flags: []
-    },
-    {
-        id: 6, name: 'Parvati Meena', age: 67, gender: 'Female', blood_group: 'O-', village: 'Bhavanpur', phone: '9012345678',
-        report_count: 4, risk: 72, riskHistory: [61, 64, 67, 69, 72], lastVisit: '2026-04-20', scheduledVisit: '2026-05-01',
-        householdId: 'HH-BP-211', pendingReports: 1, followupStatus: 'overdue', flags: ['low oxygen']
-    },
-    {
-        id: 7, name: 'Amit Rawat', age: 33, gender: 'Male', blood_group: 'A-', village: 'Nandgaon', phone: '9234567891',
-        report_count: 0, risk: 24, riskHistory: [20, 22, 22, 23, 24], lastVisit: '2026-04-25', scheduledVisit: '2026-05-06',
-        householdId: 'HH-NG-309', pendingReports: 0, followupStatus: 'scheduled', flags: []
-    },
-]
-
-const initialVillageCoords = {
-    Chandpur: { x: 28, y: 34 },
-    Ramgarh: { x: 62, y: 28 },
-    Devpur: { x: 48, y: 68 },
-    Bhavanpur: { x: 76, y: 62 },
-    Nandgaon: { x: 20, y: 72 },
-}
-
-const STORAGE_PATIENTS = 'hm_asha_patients'
-const STORAGE_VILLAGES = 'hm_asha_villages'
-
-const loadStored = (key, fallback) => {
-    try {
-        const raw = localStorage.getItem(key)
-        return raw ? JSON.parse(raw) : fallback
-    } catch {
-        return fallback
-    }
-}
 
 const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
@@ -86,7 +29,7 @@ const tabs = [
 ]
 
 const riskColor = (risk) => risk >= 60 ? '#ef4444' : risk >= 30 ? '#f59e0b' : '#10b981'
-const riskLabel = (risk) => risk >= 60 ? 'High' : risk >= 30 ? 'Medium' : 'Low'
+const riskLabel = (risk) => risk >= 60 ? 'At Risk' : risk >= 30 ? 'Medium' : 'Low'
 
 const sparklinePoints = (values) => {
     const min = Math.min(...values)
@@ -98,10 +41,59 @@ const sparklinePoints = (values) => {
     }).join(' ')
 }
 
+/** Spread village markers on the map so clusters never overlap. */
+function layoutVillagePositions(villageNames) {
+    const names = [...villageNames].sort((a, b) => a.localeCompare(b))
+    const n = names.length
+    if (n === 0) return {}
+
+    const layout = {}
+    const cx = 50
+    const cy = 48
+    const radius = Math.min(34, 14 + n * 2.8)
+
+    names.forEach((name, i) => {
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2
+        layout[name] = {
+            x: cx + Math.cos(angle) * radius,
+            y: cy + Math.sin(angle) * radius * 0.82,
+        }
+    })
+
+    const minDist = 13
+    for (let pass = 0; pass < 12; pass++) {
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                const a = names[i]
+                const b = names[j]
+                const dx = layout[b].x - layout[a].x
+                const dy = layout[b].y - layout[a].y
+                const dist = Math.hypot(dx, dy) || 0.01
+                if (dist < minDist) {
+                    const push = (minDist - dist) / 2
+                    layout[a].x -= (dx / dist) * push
+                    layout[a].y -= (dy / dist) * push
+                    layout[b].x += (dx / dist) * push
+                    layout[b].y += (dy / dist) * push
+                }
+            }
+        }
+        names.forEach((name) => {
+            layout[name].x = Math.max(14, Math.min(86, layout[name].x))
+            layout[name].y = Math.max(14, Math.min(86, layout[name].y))
+        })
+    }
+    return layout
+}
+
 export default function RuralMode() {
-    const { logout } = useAuth()
-    const [patients, setPatients] = useState(() => loadStored(STORAGE_PATIENTS, initialPatients))
-    const [villages, setVillages] = useState(() => loadStored(STORAGE_VILLAGES, initialVillageCoords))
+    const { logout, token } = useAuth()
+    const [patients, setPatients] = useState([])
+    const [villages, setVillages] = useState({})
+    const [extraVillages, setExtraVillages] = useState({})
+    const [visitQueue, setVisitQueue] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [syncError, setSyncError] = useState('')
     const [activeTab, setActiveTab] = useState('overview')
     const [search, setSearch] = useState('')
     const [selectedVillage, setSelectedVillage] = useState('All Villages')
@@ -111,23 +103,54 @@ export default function RuralMode() {
     const [newPatient, setNewPatient] = useState({ name: '', age: '', gender: 'Female', blood_group: '', village: '', phone: '', householdId: '' })
     const [newVillageName, setNewVillageName] = useState('')
 
-    useEffect(() => {
-        localStorage.setItem(STORAGE_PATIENTS, JSON.stringify(patients))
-    }, [patients])
+    const mergedVillages = useMemo(() => ({ ...villages, ...extraVillages }), [villages, extraVillages])
+
+    const loadDashboard = async () => {
+        if (!token) return
+        setLoading(true)
+        setSyncError('')
+        try {
+            const res = await fetch('/api/ourhealth/dashboard', {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.detail || 'Could not sync OurHealth data')
+            setPatients(data.patients || [])
+            setVillages(data.villages || {})
+            setVisitQueue(data.visits || [])
+        } catch (err) {
+            setSyncError(err.message)
+        }
+        setLoading(false)
+    }
 
     useEffect(() => {
-        localStorage.setItem(STORAGE_VILLAGES, JSON.stringify(villages))
-    }, [villages])
+        localStorage.removeItem('hm_asha_patients')
+        localStorage.removeItem('hm_asha_villages')
+        loadDashboard()
+    }, [token])
 
-    const villageOptions = useMemo(() => ['All Villages', ...Object.keys(villages)], [villages])
+    const villageOptions = useMemo(() => ['All Villages', ...Object.keys(mergedVillages)], [mergedVillages])
 
-    const villageClusters = useMemo(() => Object.keys(villages).map((village) => {
-        const rows = patients.filter((patient) => patient.village === village)
-        const highRisk = rows.filter((patient) => patient.risk >= 60).length
-        const pendingReports = rows.reduce((sum, patient) => sum + patient.pendingReports, 0)
-        const avgRisk = rows.length ? Math.round(rows.reduce((sum, patient) => sum + patient.risk, 0) / rows.length) : 0
-        return { village, count: rows.length, highRisk, pendingReports, avgRisk, ...villages[village] }
-    }), [patients, villages])
+    const villageClusters = useMemo(() => {
+        const names = Object.keys(mergedVillages)
+        const positions = layoutVillagePositions(names)
+        return names.map((village) => {
+            const rows = patients.filter((patient) => patient.village === village)
+            const highRisk = rows.filter((patient) => patient.risk >= 60).length
+            const pendingReports = rows.reduce((sum, patient) => sum + patient.pendingReports, 0)
+            const avgRisk = rows.length ? Math.round(rows.reduce((sum, patient) => sum + patient.risk, 0) / rows.length) : 0
+            return {
+                village,
+                count: rows.length,
+                highRisk,
+                pendingReports,
+                avgRisk,
+                x: positions[village].x,
+                y: positions[village].y,
+            }
+        })
+    }, [patients, mergedVillages])
 
     const filteredPatients = useMemo(() => patients.filter((patient) => {
         const query = search.trim().toLowerCase()
@@ -140,8 +163,7 @@ export default function RuralMode() {
         return matchesSearch && matchesVillage && matchesRisk
     }), [patients, search, selectedVillage, riskFilter])
 
-    const urgentAlerts = useMemo(() => patients.filter((patient) => patient.risk >= 60 || patient.flags.length > 0), [patients])
-    const visitQueue = useMemo(() => [...patients].filter((patient) => patient.scheduledVisit).sort((a, b) => a.scheduledVisit.localeCompare(b.scheduledVisit)), [patients])
+    const urgentAlerts = useMemo(() => patients.filter((patient) => patient.risk >= 60 || (patient.flags && patient.flags.length > 0)), [patients])
     const selectedCluster = villageClusters.find((cluster) => cluster.village === selectedVillage)
 
     const stats = [
@@ -155,40 +177,64 @@ export default function RuralMode() {
 
     const addPatient = async () => {
         if (!newPatient.name || !newPatient.village) return
-        const patient = {
-            id: Date.now(),
-            ...newPatient,
-            age: Number(newPatient.age || 0),
-            report_count: 0,
-            risk: 18,
-            riskHistory: [18, 18, 18, 18, 18],
-            lastVisit: '',
-            scheduledVisit: '',
-            pendingReports: 0,
-            followupStatus: 'scheduled',
-            flags: [],
-            householdId: newPatient.householdId || `HH-${newPatient.village.slice(0, 2).toUpperCase()}-${Date.now().toString().slice(-3)}`
+        try {
+            const res = await fetch('/api/ourhealth/patients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                    name: newPatient.name,
+                    age: Number(newPatient.age || 0) || null,
+                    gender: newPatient.gender,
+                    blood_group: newPatient.blood_group || null,
+                    village: newPatient.village,
+                    phone: newPatient.phone || null,
+                }),
+            })
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.detail || 'Failed to add patient')
+            }
+            await loadDashboard()
+            setNewPatient({ name: '', age: '', gender: 'Female', blood_group: '', village: '', phone: '', householdId: '' })
+            setShowAdd(false)
+            setSelectedVillage(newPatient.village)
+            setActiveTab('patients')
+        } catch (err) {
+            setSyncError(err.message)
         }
-        setPatients((prev) => [patient, ...prev])
-        setNewPatient({ name: '', age: '', gender: 'Female', blood_group: '', village: '', phone: '', householdId: '' })
-        setShowAdd(false)
-        setSelectedVillage(patient.village)
-        setActiveTab('patients')
     }
 
     const addNewVillage = () => {
         const name = newVillageName.trim()
-        if (!name || villages[name]) return
+        if (!name || mergedVillages[name]) return
         const x = Math.floor(Math.random() * 80) + 10
         const y = Math.floor(Math.random() * 80) + 10
-        setVillages((prev) => ({ ...prev, [name]: { x, y } }))
+        setExtraVillages((prev) => ({ ...prev, [name]: { x, y } }))
         setNewVillageName('')
         setSelectedVillage(name)
         setActiveTab('map')
     }
 
-    const scheduleVisit = (id, date) => {
-        setPatients((prev) => prev.map((patient) => patient.id === id ? { ...patient, scheduledVisit: date, followupStatus: 'scheduled' } : patient))
+    const scheduleVisit = async (patientId, date) => {
+        if (!patientId || !date) return
+        try {
+            const res = await fetch('/api/ourhealth/visits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                    patient_id: patientId,
+                    visit_date: new Date(date).toISOString(),
+                    purpose: 'ASHA follow-up',
+                }),
+            })
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.detail || 'Failed to schedule visit')
+            }
+            await loadDashboard()
+        } catch (err) {
+            setSyncError(err.message)
+        }
     }
 
     const selectCluster = (village) => {
@@ -209,10 +255,25 @@ export default function RuralMode() {
                     <h2>OurHealth Mode</h2>
                     <p>Village-first workflow for patient registry, cluster mapping, visit planning, and outreach.</p>
                 </div>
-                <button className="btn btn-outline btn-sm" onClick={logout}>
-                    <LogOut size={16} /> Logout
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-outline btn-sm" onClick={loadDashboard} disabled={loading}>
+                        <RefreshCw size={16} /> Sync
+                    </button>
+                    <button className="btn btn-outline btn-sm" onClick={logout}>
+                        <LogOut size={16} /> Logout
+                    </button>
+                </div>
             </div>
+
+            {syncError && (
+                <div className="glass-card" style={{ marginBottom: 12, borderLeft: '3px solid #ef4444', color: '#ef4444', fontSize: 13 }}>
+                    {syncError}
+                </div>
+            )}
+
+            {loading && (
+                <div className="glass-card" style={{ marginBottom: 12, opacity: 0.8 }}>Syncing patients from database…</div>
+            )}
 
             <div className="glass-card animate-in" style={{ marginBottom: 16 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: activeTab === 'patients' ? 'minmax(220px, 1fr) auto' : 'auto', gap: 12, alignItems: 'center' }}>
@@ -271,7 +332,7 @@ export default function RuralMode() {
                         <input className="form-input" placeholder="Blood group" value={newPatient.blood_group} onChange={(event) => updateNewPatient('blood_group', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                         <select className="form-select" value={newPatient.village} onChange={(event) => updateNewPatient('village', event.target.value)}>
                             <option value="">Village</option>
-                            {Object.keys(villages).map((village) => <option key={village}>{village}</option>)}
+                            {Object.keys(mergedVillages).map((village) => <option key={village}>{village}</option>)}
                         </select>
                         <input className="form-input" placeholder="Phone" value={newPatient.phone} onChange={(event) => updateNewPatient('phone', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                     </div>
@@ -294,7 +355,7 @@ export default function RuralMode() {
                     </div>
                     <div className="grid-2 animate-in">
                         <AlertsPanel alerts={urgentAlerts} onSelect={setSelectedPatient} />
-                        <VisitPanel visits={visitQueue.slice(0, 5)} onSchedule={scheduleVisit} />
+                        <VisitPanel visits={visitQueue.slice(0, 5)} patients={patients} onSchedule={scheduleVisit} />
                     </div>
                 </>
             )}
@@ -320,17 +381,20 @@ export default function RuralMode() {
             )}
 
             {activeTab === 'visits' && (
-                <VisitPanel visits={visitQueue} onSchedule={scheduleVisit} expanded />
+                <VisitPanel visits={visitQueue} patients={patients} onSchedule={scheduleVisit} expanded />
             )}
 
             {activeTab === 'outreach' && (
-                <OutreachPanel alerts={urgentAlerts} visits={visitQueue} />
+                <OutreachPanel patients={patients} alerts={urgentAlerts} visits={visitQueue} />
             )}
 
             {selectedPatient && (
                 <PatientModal
                     patient={selectedPatient}
-                    family={patients.filter((patient) => patient.householdId === selectedPatient.householdId)}
+                    family={patients.filter((patient) =>
+                        patient.householdId === selectedPatient.householdId
+                        || selectedPatient.family_members?.some((f) => f.id === patient.id)
+                    )}
                     onClose={() => setSelectedPatient(null)}
                     onSchedule={scheduleVisit}
                 />
@@ -352,7 +416,7 @@ function PatientGrid({ patients, onSelect }) {
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                             <div>
                                 <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{patient.name}</div>
-                                <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>{patient.village} | {patient.age}/{patient.gender[0]} | {patient.blood_group}</div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>{patient.village} | {patient.age}/{String(patient.gender || '?')[0]} | {patient.blood_group || '—'}</div>
                             </div>
                             <div style={{ color: riskColor(patient.risk), fontWeight: 800 }}>{patient.risk}%</div>
                         </div>
@@ -364,7 +428,7 @@ function PatientGrid({ patients, onSelect }) {
                                 {delta >= 0 ? <TrendingUp size={13} color="#ef4444" /> : <TrendingDown size={13} color="#10b981" />}
                                 Trend {delta >= 0 ? '+' : ''}{delta}
                             </span>
-                            <span>{riskLabel(patient.risk)} risk</span>
+                            <span style={{ color: patient.risk >= 60 ? '#ef4444' : undefined }}>{riskLabel(patient.risk)}</span>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                             {patient.pendingReports > 0 && <span className="sidebar-badge">Report pending</span>}
@@ -378,50 +442,126 @@ function PatientGrid({ patients, onSelect }) {
 }
 
 function ClusterMap({ clusters, selectedVillage, onSelect }) {
+    if (!clusters.length) {
+        return (
+            <div className="glass-card">
+                <h3 style={{ fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <MapPin size={18} color="#06b6d4" /> Village Cluster Map
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>No villages yet. Add patients with a village name, then Sync.</p>
+            </div>
+        )
+    }
+
+    const hubX = clusters.reduce((s, c) => s + c.x, 0) / clusters.length
+    const hubY = clusters.reduce((s, c) => s + c.y, 0) / clusters.length
+    const sorted = [...clusters].sort((a, b) => a.village.localeCompare(b.village))
+
     return (
         <div className="glass-card">
-            <h3 style={{ fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <MapPin size={18} color="#06b6d4" /> Village Cluster Map
-            </h3>
-            <div style={{ position: 'relative', aspectRatio: '4 / 3', borderRadius: 8, overflow: 'hidden', background: 'linear-gradient(135deg, rgba(6,182,212,0.12), rgba(16,185,129,0.08))', border: '1px solid var(--border-glass)' }}>
-                <svg viewBox="0 0 100 100" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-                    <path d="M18 72 C35 56, 42 42, 62 28" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2" strokeDasharray="3 3" />
-                    <path d="M62 28 C70 42, 76 52, 76 62" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2" strokeDasharray="3 3" />
-                    <path d="M28 34 C38 45, 42 55, 48 68" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2" strokeDasharray="3 3" />
-                </svg>
-                {clusters.map((cluster) => {
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: 16, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <MapPin size={18} color="#06b6d4" /> Village Cluster Map
+                </h3>
+                <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(6,182,212,0.5)' }} /> Stable cluster
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(239,68,68,0.55)' }} /> At-risk cluster
+                    </span>
+                </div>
+            </div>
+
+            <svg
+                viewBox="0 0 100 100"
+                role="img"
+                aria-label="Village cluster map"
+                style={{
+                    width: '100%',
+                    height: 'auto',
+                    aspectRatio: '4 / 3',
+                    borderRadius: 12,
+                    background: 'linear-gradient(160deg, rgba(6,182,212,0.1) 0%, rgba(15,23,42,0.4) 50%, rgba(16,185,129,0.08) 100%)',
+                    border: '1px solid var(--border-glass)',
+                }}
+            >
+                {sorted.map((cluster) => (
+                    <line
+                        key={`link-${cluster.village}`}
+                        x1={hubX}
+                        y1={hubY}
+                        x2={cluster.x}
+                        y2={cluster.y}
+                        stroke="rgba(255,255,255,0.12)"
+                        strokeWidth="0.35"
+                        strokeDasharray="1.2 1.2"
+                    />
+                ))}
+                <circle cx={hubX} cy={hubY} r="1.2" fill="rgba(255,255,255,0.15)" />
+
+                {sorted.map((cluster) => {
                     const selected = selectedVillage === cluster.village
-                    const size = 46 + Math.min(cluster.count * 9, 34)
+                    const atRisk = cluster.highRisk > 0 || cluster.avgRisk >= 60
+                    const r = 3.2 + Math.min(cluster.count * 0.55, 4)
+                    const fill = atRisk ? 'rgba(239,68,68,0.55)' : 'rgba(6,182,212,0.45)'
+                    const stroke = selected ? '#22d3ee' : 'rgba(255,255,255,0.35)'
+
                     return (
-                        <button
+                        <g
                             key={cluster.village}
+                            style={{ cursor: 'pointer' }}
                             onClick={() => onSelect(cluster.village)}
-                            title={`${cluster.village}: ${cluster.count} patients, ${cluster.highRisk} high risk`}
-                            style={{
-                                position: 'absolute',
-                                left: `${cluster.x}%`,
-                                top: `${cluster.y}%`,
-                                transform: 'translate(-50%, -50%)',
-                                width: size,
-                                height: size,
-                                borderRadius: '50%',
-                                border: selected ? '3px solid #06b6d4' : '1px solid rgba(255,255,255,0.2)',
-                                background: cluster.highRisk ? 'rgba(239,68,68,0.24)' : 'rgba(6,182,212,0.22)',
-                                color: 'var(--text-primary)',
-                                display: 'grid',
-                                placeItems: 'center',
-                                boxShadow: selected ? '0 0 0 8px rgba(6,182,212,0.12)' : 'none'
-                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && onSelect(cluster.village)}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`${cluster.village}, ${cluster.count} patients`}
                         >
-                            <span style={{ fontWeight: 800 }}>{cluster.count}</span>
-                        </button>
+                            {selected && (
+                                <circle cx={cluster.x} cy={cluster.y} r={r + 2.2} fill="none" stroke="#22d3ee" strokeWidth="0.5" opacity="0.85" />
+                            )}
+                            <circle cx={cluster.x} cy={cluster.y} r={r} fill={fill} stroke={stroke} strokeWidth={selected ? 0.55 : 0.3} />
+                            <text
+                                x={cluster.x}
+                                y={cluster.y + 0.35}
+                                textAnchor="middle"
+                                fontSize="3.2"
+                                fontWeight="700"
+                                fill="#f8fafc"
+                                style={{ pointerEvents: 'none', userSelect: 'none' }}
+                            >
+                                {cluster.count}
+                            </text>
+                            {(selected || cluster.count > 0) && (
+                                <text
+                                    x={cluster.x}
+                                    y={cluster.y + r + 3.8}
+                                    textAnchor="middle"
+                                    fontSize="2.4"
+                                    fill={selected ? '#67e8f9' : 'rgba(226,232,240,0.75)'}
+                                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                                >
+                                    {cluster.village.length > 14 ? `${cluster.village.slice(0, 12)}…` : cluster.village}
+                                </text>
+                            )}
+                        </g>
                     )
                 })}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginTop: 12 }}>
-                {clusters.map((cluster) => (
-                    <button key={cluster.village} className={`btn btn-sm ${selectedVillage === cluster.village ? 'btn-primary' : 'btn-outline'}`} onClick={() => onSelect(cluster.village)}>
+            </svg>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                {sorted.map((cluster) => (
+                    <button
+                        key={cluster.village}
+                        type="button"
+                        className={`btn btn-sm ${selectedVillage === cluster.village ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => onSelect(cluster.village)}
+                        style={{ minWidth: 0 }}
+                    >
                         {cluster.village} ({cluster.count})
+                        {cluster.highRisk > 0 && (
+                            <span style={{ marginLeft: 6, color: '#ef4444', fontSize: 10 }}>• {cluster.highRisk} at risk</span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -462,7 +602,22 @@ function AlertsPanel({ alerts, onSelect }) {
     )
 }
 
-function VisitPanel({ visits, onSchedule, expanded = false }) {
+function VisitPanel({ visits, patients, onSchedule, expanded = false }) {
+    if (!visits.length) {
+        return (
+            <div className="glass-card">
+                <h3 style={{ fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <CalendarDays size={18} color="#f59e0b" /> Visit Scheduler
+                </h3>
+                <div style={{ color: 'var(--text-muted)' }}>No scheduled visits. Patients can book from their app, or schedule below.</div>
+                {expanded && patients.length > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                        <ScheduleVisitForm patients={patients} onSchedule={onSchedule} />
+                    </div>
+                )}
+            </div>
+        )
+    }
     return (
         <div className="glass-card">
             <h3 style={{ fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -470,52 +625,94 @@ function VisitPanel({ visits, onSchedule, expanded = false }) {
             </h3>
             <div style={{ display: 'grid', gap: 10 }}>
                 {visits.map((visit) => (
-                    <div key={visit.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'grid', gridTemplateColumns: expanded ? '1fr 170px' : '1fr', gap: 8, alignItems: 'center' }}>
+                    <div key={visit.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'grid', gridTemplateColumns: expanded ? '1fr auto' : '1fr', gap: 8, alignItems: 'center' }}>
                         <div>
                             <div style={{ fontWeight: 700 }}>{visit.name}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{visit.village} | {visit.scheduledVisit} | {visit.followupStatus}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                                {visit.village} | {visit.scheduledVisit || visit.scheduledAt?.slice(0, 10)} | {visit.followupStatus}
+                            </div>
+                            {visit.purpose && <div style={{ fontSize: 12, marginTop: 4 }}>Purpose: {visit.purpose}</div>}
+                            {visit.check_in_code && (
+                                <div style={{ fontSize: 12, marginTop: 6, fontFamily: 'monospace', color: '#34d399' }}>
+                                    Check-in code: <strong>{visit.check_in_code}</strong>
+                                </div>
+                            )}
                         </div>
-                        {expanded && (
-                            <input className="form-input" type="date" defaultValue={visit.scheduledVisit} onChange={(event) => onSchedule(visit.id, event.target.value)} />
+                        {expanded && visit.patientId && (
+                            <input className="form-input" type="date" defaultValue={visit.scheduledVisit} onChange={(event) => onSchedule(visit.patientId, event.target.value)} title="Reschedule" />
                         )}
                     </div>
                 ))}
             </div>
+            {expanded && (
+                <div style={{ marginTop: 16, borderTop: '1px solid var(--border-glass)', paddingTop: 16 }}>
+                    <ScheduleVisitForm patients={patients} onSchedule={onSchedule} />
+                </div>
+            )}
         </div>
     )
 }
 
-function OutreachPanel({ alerts, visits }) {
+function ScheduleVisitForm({ patients, onSchedule }) {
+    const [patientId, setPatientId] = useState('')
+    const [date, setDate] = useState('')
+    return (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <select className="form-select" value={patientId} onChange={(e) => setPatientId(e.target.value)} style={{ minWidth: 160 }}>
+                <option value="">Select patient</option>
+                {patients.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.village})</option>)}
+            </select>
+            <input className="form-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <button className="btn btn-primary btn-sm" disabled={!patientId || !date} onClick={() => onSchedule(Number(patientId), date)}>
+                Schedule
+            </button>
+        </div>
+    )
+}
+
+function OutreachPanel({ patients, alerts, visits }) {
     const overdue = visits.filter((visit) => visit.followupStatus === 'overdue')
+    const contactList = patients.length ? patients : alerts
     return (
         <div className="grid-2 animate-in">
             <div className="glass-card">
-                <h3 style={{ fontSize: 16, marginBottom: 12 }}>Priority Patients (High Risk/Flags)</h3>
+                <h3 style={{ fontSize: 16, marginBottom: 12 }}>All Patients — Contact List</h3>
                 <div style={{ display: 'grid', gap: 10 }}>
-                    {alerts.length === 0 && <div style={{ color: 'var(--text-muted)' }}>No priority patients.</div>}
-                    {alerts.map(patient => (
-                        <div key={patient.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    {contactList.length === 0 && <div style={{ color: 'var(--text-muted)' }}>No patients synced yet. Register users on the patient app or click Sync.</div>}
+                    {contactList.map(patient => (
+                        <div key={patient.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                             <div>
                                 <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{patient.name}</div>
                                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{patient.village} • Risk: {patient.risk}%</div>
+                                <div style={{ fontSize: 13, marginTop: 4, fontFamily: 'monospace' }}>
+                                    📞 {patient.phone}
+                                    {patient.phone_is_sample && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>(sample)</span>}
+                                </div>
+                                {patient.email && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{patient.email}</div>}
                             </div>
-                            <button className="btn btn-outline btn-sm"><Phone size={14} /> Contact</button>
+                            <a href={`tel:${patient.phone}`} className="btn btn-outline btn-sm" style={{ textDecoration: 'none' }}>
+                                <Phone size={14} /> Call
+                            </a>
                         </div>
                     ))}
                 </div>
             </div>
-            
+
             <div className="glass-card">
                 <h3 style={{ fontSize: 16, marginBottom: 12 }}>Overdue Follow-ups</h3>
                 <div style={{ display: 'grid', gap: 10 }}>
                     {overdue.length === 0 && <div style={{ color: 'var(--text-muted)' }}>No overdue follow-ups.</div>}
-                    {overdue.map(patient => (
-                        <div key={patient.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    {overdue.map(visit => (
+                        <div key={visit.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                             <div>
-                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{patient.name}</div>
-                                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{patient.village} • Due: {patient.scheduledVisit}</div>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{visit.name}</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{visit.village} • Due: {visit.scheduledVisit}</div>
                             </div>
-                            <button className="btn btn-outline btn-sm"><Phone size={14} /> Contact</button>
+                            {visit.patientId && contactList.find(p => p.id === visit.patientId)?.phone && (
+                                <a href={`tel:${contactList.find(p => p.id === visit.patientId).phone}`} className="btn btn-outline btn-sm" style={{ textDecoration: 'none' }}>
+                                    <Phone size={14} /> Call
+                                </a>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -532,37 +729,75 @@ function PatientModal({ patient, family, onClose, onSchedule }) {
                     <div>
                         <h3 style={{ fontSize: 20, fontWeight: 800 }}>{patient.name}</h3>
                         <div style={{ color: 'var(--text-muted)', marginTop: 4 }}>{patient.village} | Household {patient.householdId}</div>
+                        {patient.email && <div style={{ fontSize: 12, marginTop: 4 }}>{patient.email}</div>}
+                        <div style={{ fontSize: 13, marginTop: 6, fontFamily: 'monospace' }}>
+                            📞 {patient.phone}{patient.phone_is_sample ? ' (sample)' : ''}
+                        </div>
                     </div>
                     <div style={{ color: riskColor(patient.risk), fontWeight: 900, fontSize: 24 }}>{patient.risk}%</div>
                 </div>
                 <div className="grid-3" style={{ gap: 10, marginBottom: 14 }}>
-                    <MiniMetric label="Age/Gender" value={`${patient.age}/${patient.gender[0]}`} />
+                    <MiniMetric label="Age/Gender" value={`${patient.age}/${String(patient.gender || '?')[0]}`} />
                     <MiniMetric label="Blood Group" value={patient.blood_group || 'N/A'} />
                     <MiniMetric label="Reports" value={patient.report_count} />
                 </div>
+                {(patient.height_cm || patient.weight_kg) && (
+                    <div className="grid-3" style={{ gap: 10, marginBottom: 14 }}>
+                        <MiniMetric label="Height" value={patient.height_cm ? `${patient.height_cm} cm` : '—'} />
+                        <MiniMetric label="Weight" value={patient.weight_kg ? `${patient.weight_kg} kg` : '—'} />
+                        <MiniMetric label="Risk Level" value={riskLabel(patient.risk)} color={riskColor(patient.risk)} />
+                    </div>
+                )}
+                {patient.medical_conditions?.length > 0 && (
+                    <div className="glass-card" style={{ padding: 14, marginBottom: 12 }}>
+                        <h4 style={{ fontSize: 14, marginBottom: 8 }}>Profile Conditions</h4>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {patient.medical_conditions.map((c, i) => (
+                                <span key={i} className="sidebar-badge">{c}</span>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 <div className="glass-card" style={{ padding: 14, marginBottom: 12 }}>
-                    <h4 style={{ fontSize: 14, marginBottom: 8 }}>Family Members</h4>
-                    <PatientMiniList patients={family} onSelect={() => {}} empty="No linked family members." />
+                    <h4 style={{ fontSize: 14, marginBottom: 8 }}>Report Overviews</h4>
+                    {patient.reports?.length ? patient.reports.map((r) => (
+                        <div key={r.id} style={{ padding: 10, marginBottom: 8, borderRadius: 8, background: 'rgba(255,255,255,0.04)', borderLeft: `3px solid ${riskColor(r.risk_score || 0)}` }}>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{r.filename}</div>
+                            <div style={{ fontSize: 12, color: riskColor(r.risk_score || 0) }}>Risk: {r.risk_score}% ({r.risk_level})</div>
+                            {r.summary && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>{r.summary}</div>}
+                        </div>
+                    )) : (
+                        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No medical reports scanned yet.</div>
+                    )}
                 </div>
                 <div className="glass-card" style={{ padding: 14, marginBottom: 12 }}>
-                    <h4 style={{ fontSize: 14, marginBottom: 8 }}>Visit History</h4>
-                    {patient.lastVisit ? (
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(255,255,255,0.04)', padding: 10, borderRadius: 8 }}>
-                            <History size={16} color="var(--text-muted)" />
-                            <div>
-                                <div style={{ fontSize: 14 }}>Last Visit: {patient.lastVisit}</div>
-                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Status: {patient.followupStatus}</div>
-                            </div>
+                    <h4 style={{ fontSize: 14, marginBottom: 8 }}>Appointments</h4>
+                    {patient.visits?.length ? patient.visits.map((v) => (
+                        <div key={v.id} style={{ fontSize: 13, padding: 8, marginBottom: 6, background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
+                            {v.date?.slice(0, 10)} — {v.purpose} ({v.status})
+                            {v.check_in_code && <span style={{ marginLeft: 8, fontFamily: 'monospace', color: '#34d399' }}>Code: {v.check_in_code}</span>}
                         </div>
-                    ) : (
-                        <div style={{ color: 'var(--text-muted)' }}>No previous visits recorded.</div>
+                    )) : (
+                        <div style={{ color: 'var(--text-muted)' }}>No visits scheduled.</div>
                     )}
+                </div>
+                {patient.family_members?.length > 0 && (
+                    <div className="glass-card" style={{ padding: 14, marginBottom: 12 }}>
+                        <h4 style={{ fontSize: 14, marginBottom: 8 }}>Linked Family (by email)</h4>
+                        {patient.family_members.map((f) => (
+                            <div key={f.id} style={{ fontSize: 13, padding: 8, marginBottom: 6, background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
+                                {f.name} ({f.relation}) — {f.email} • {f.phone}
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="glass-card" style={{ padding: 14, marginBottom: 12 }}>
+                    <h4 style={{ fontSize: 14, marginBottom: 8 }}>Household</h4>
+                    <PatientMiniList patients={family.filter((p) => p.id !== patient.id)} onSelect={() => {}} empty="No linked family members." />
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <input className="form-input" type="date" defaultValue={patient.scheduledVisit} onChange={(event) => onSchedule(patient.id, event.target.value)} style={{ maxWidth: 180 }} />
-                    <button className="btn btn-outline"><Phone size={14} /> Call</button>
-                    <button className="btn btn-outline"><Route size={14} /> Add To Route</button>
-                    <button className="btn btn-outline"><AlertTriangle size={14} /> Flag</button>
+                    <a href={`tel:${patient.phone}`} className="btn btn-outline" style={{ textDecoration: 'none' }}><Phone size={14} /> Call</a>
                     <button className="btn btn-primary" onClick={onClose}>Done</button>
                 </div>
             </div>

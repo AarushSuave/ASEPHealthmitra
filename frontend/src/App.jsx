@@ -15,6 +15,11 @@ import Signup from './pages/Signup'
 import Profile from './pages/Profile'
 import VisitPlanner from './pages/VisitPlanner'
 import VisitsHistory from './pages/VisitsHistory'
+import AdminLayout from './components/AdminLayout'
+import AdminDashboard from './pages/AdminDashboard'
+import AdminVillages from './pages/AdminVillages'
+import AdminPatients from './pages/AdminPatients'
+import AdminAppointments from './pages/AdminAppointments'
 import healthmitraLogo from './assets/healthmitra-logo.jpeg'
 
 const navItems = [
@@ -31,12 +36,11 @@ const navItems = [
 ]
 
 const pageTitles = {
-    '/': 'OurHealth Dashboard',
+    '/': 'Health Dashboard',
     '/report': 'Medical Report Scanner',
     '/risk': 'Future Risk Predictor',
     '/respiratory-faqs': 'FAQs',
     '/twin': 'Health Twin',
-    '/rural': 'OurHealth Mode',
     '/profile': 'My Profile',
     '/visits': 'Visit Planner',
     '/history': 'Previous Visits History',
@@ -72,6 +76,21 @@ export default function App() {
             <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+            </Routes>
+        )
+    }
+
+    if (user?.role === 'admin') {
+        return (
+            <Routes>
+                <Route path="/admin" element={<AdminLayout />}>
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="appointments" element={<AdminAppointments />} />
+                    <Route path="villages" element={<AdminVillages />} />
+                    <Route path="patients" element={<AdminPatients />} />
+                    <Route path="*" element={<Navigate to="/admin" replace />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/admin" replace />} />
             </Routes>
         )
     }
@@ -182,7 +201,7 @@ export default function App() {
                     <Route path="/memory" element={<Navigate to="/" replace />} />
                     <Route path="/respiratory-faqs" element={<ProtectedRoute><RespiratoryFaqs /></ProtectedRoute>} />
                     <Route path="/twin" element={<ProtectedRoute><HealthTwin /></ProtectedRoute>} />
-                    <Route path="/rural" element={<ProtectedRoute><RuralMode /></ProtectedRoute>} />
+                    <Route path="/rural" element={<Navigate to="/" replace />} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                     <Route path="/visits" element={<ProtectedRoute><VisitPlanner /></ProtectedRoute>} />
                     <Route path="/history" element={<ProtectedRoute><VisitsHistory /></ProtectedRoute>} />
