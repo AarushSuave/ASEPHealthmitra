@@ -1742,6 +1742,37 @@ select {
   font-weight: 500;
 }
 
+.auth-role-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.role-pill {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.role-pill:hover {
+  border-color: var(--accent-teal);
+  color: var(--text-primary);
+}
+
+.role-pill.active {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(139, 92, 246, 0.2));
+  border-color: var(--accent-teal);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.3);
+}
+
 /* ═══════════════════════════════════════════════════════
    HealthMitra AI Chat
    ═══════════════════════════════════════════════════════ */

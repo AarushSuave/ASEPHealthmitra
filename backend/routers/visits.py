@@ -18,8 +18,8 @@ class VisitCreate(BaseModel):
 
 @router.get("/")
 def get_visits(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Get all visits for the current user."""
-    visits = db.query(Visit).filter(Visit.user_id == user.id).order_by(Visit.visit_date.asc()).all()
+    """Get all visits (shared across user profiles)."""
+    visits = db.query(Visit).order_by(Visit.visit_date.asc()).all()
     return [{
         "id": v.id,
         "patient_name": v.patient_name,
@@ -51,7 +51,7 @@ def create_visit(visit_data: VisitCreate, user: User = Depends(get_current_user)
 @router.put("/{visit_id}/complete")
 def complete_visit(visit_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Mark a visit as completed (e.g. after QR scan)."""
-    visit = db.query(Visit).filter(Visit.id == visit_id, Visit.user_id == user.id).first()
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visit not found")
     

@@ -1,31 +1,23 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 import {
     AlertTriangle,
-    Bell,
     CalendarDays,
-    ClipboardList,
-    Cloud,
-    CloudOff,
-    FileText,
     Home,
     MapPin,
     Megaphone,
     Phone,
     Plus,
-    QrCode,
     Route,
     Search,
     ShieldAlert,
     TrendingDown,
     TrendingUp,
-    Upload,
     UserPlus,
     Users,
-    Brain,
-    HeartPulse,
-    History
+    History,
+    LogOut
 } from 'lucide-react'
+import { useAuth } from '../AuthContext'
 
 const initialPatients = [
     {
@@ -65,7 +57,7 @@ const initialPatients = [
     },
 ]
 
-const villageCoords = {
+const initialVillageCoords = {
     Chandpur: { x: 28, y: 34 },
     Ramgarh: { x: 62, y: 28 },
     Devpur: { x: 48, y: 68 },
@@ -73,14 +65,23 @@ const villageCoords = {
     Nandgaon: { x: 20, y: 72 },
 }
 
+const STORAGE_PATIENTS = 'hm_asha_patients'
+const STORAGE_VILLAGES = 'hm_asha_villages'
+
+const loadStored = (key, fallback) => {
+    try {
+        const raw = localStorage.getItem(key)
+        return raw ? JSON.parse(raw) : fallback
+    } catch {
+        return fallback
+    }
+}
+
 const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'map', label: 'Cluster Map', icon: MapPin },
     { id: 'visits', label: 'Visit Planner', icon: CalendarDays },
-    { id: 'qr', label: 'QR Check-in', icon: QrCode },
-    { id: 'history', label: 'Visit History', icon: History },
-    { id: 'camp', label: 'Camp Intake', icon: ClipboardList },
     { id: 'outreach', label: 'Outreach', icon: Megaphone },
 ]
 
@@ -98,28 +99,35 @@ const sparklinePoints = (values) => {
 }
 
 export default function RuralMode() {
-    const navigate = useNavigate()
-    const [patients, setPatients] = useState(initialPatients)
+    const { logout } = useAuth()
+    const [patients, setPatients] = useState(() => loadStored(STORAGE_PATIENTS, initialPatients))
+    const [villages, setVillages] = useState(() => loadStored(STORAGE_VILLAGES, initialVillageCoords))
     const [activeTab, setActiveTab] = useState('overview')
     const [search, setSearch] = useState('')
     const [selectedVillage, setSelectedVillage] = useState('All Villages')
     const [riskFilter, setRiskFilter] = useState('all')
     const [selectedPatient, setSelectedPatient] = useState(null)
     const [showAdd, setShowAdd] = useState(false)
-    const [syncPending, setSyncPending] = useState(0)
-    const [isOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : false)
-    const [campMeta, setCampMeta] = useState({ location: 'Chandpur PHC', date: '2026-05-28', worker: 'ASHA001' })
     const [newPatient, setNewPatient] = useState({ name: '', age: '', gender: 'Female', blood_group: '', village: '', phone: '', householdId: '' })
+    const [newVillageName, setNewVillageName] = useState('')
 
-    const villageOptions = useMemo(() => ['All Villages', ...Object.keys(villageCoords)], [])
+    useEffect(() => {
+        localStorage.setItem(STORAGE_PATIENTS, JSON.stringify(patients))
+    }, [patients])
 
-    const villageClusters = useMemo(() => Object.keys(villageCoords).map((village) => {
+    useEffect(() => {
+        localStorage.setItem(STORAGE_VILLAGES, JSON.stringify(villages))
+    }, [villages])
+
+    const villageOptions = useMemo(() => ['All Villages', ...Object.keys(villages)], [villages])
+
+    const villageClusters = useMemo(() => Object.keys(villages).map((village) => {
         const rows = patients.filter((patient) => patient.village === village)
         const highRisk = rows.filter((patient) => patient.risk >= 60).length
         const pendingReports = rows.reduce((sum, patient) => sum + patient.pendingReports, 0)
         const avgRisk = rows.length ? Math.round(rows.reduce((sum, patient) => sum + patient.risk, 0) / rows.length) : 0
-        return { village, count: rows.length, highRisk, pendingReports, avgRisk, ...villageCoords[village] }
-    }), [patients])
+        return { village, count: rows.length, highRisk, pendingReports, avgRisk, ...villages[village] }
+    }), [patients, villages])
 
     const filteredPatients = useMemo(() => patients.filter((patient) => {
         const query = search.trim().toLowerCase()
@@ -155,23 +163,32 @@ export default function RuralMode() {
             risk: 18,
             riskHistory: [18, 18, 18, 18, 18],
             lastVisit: '',
-            scheduledVisit: campMeta.date,
+            scheduledVisit: '',
             pendingReports: 0,
             followupStatus: 'scheduled',
             flags: [],
             householdId: newPatient.householdId || `HH-${newPatient.village.slice(0, 2).toUpperCase()}-${Date.now().toString().slice(-3)}`
         }
         setPatients((prev) => [patient, ...prev])
-        setSyncPending((prev) => prev + 1)
         setNewPatient({ name: '', age: '', gender: 'Female', blood_group: '', village: '', phone: '', householdId: '' })
         setShowAdd(false)
         setSelectedVillage(patient.village)
         setActiveTab('patients')
     }
 
+    const addNewVillage = () => {
+        const name = newVillageName.trim()
+        if (!name || villages[name]) return
+        const x = Math.floor(Math.random() * 80) + 10
+        const y = Math.floor(Math.random() * 80) + 10
+        setVillages((prev) => ({ ...prev, [name]: { x, y } }))
+        setNewVillageName('')
+        setSelectedVillage(name)
+        setActiveTab('map')
+    }
+
     const scheduleVisit = (id, date) => {
         setPatients((prev) => prev.map((patient) => patient.id === id ? { ...patient, scheduledVisit: date, followupStatus: 'scheduled' } : patient))
-        setSyncPending((prev) => prev + 1)
     }
 
     const selectCluster = (village) => {
@@ -187,38 +204,30 @@ export default function RuralMode() {
 
     return (
         <div>
-            <div className="page-header">
-                <h2>OurHealth Mode</h2>
-                <p>Village-first workflow with synced risk predictor, health twin, report scanner, visit planner, QR check-in, and history.</p>
-            </div>
-
-            <div className="grid-3 animate-in" style={{ marginBottom: 16 }}>
-                <button className="glass-card" onClick={() => navigate('/risk')} style={{ textAlign: 'left' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><Brain size={16} color="#f59e0b" /> Risk Predictor</div>
-                    <div style={{ marginTop: 8, color: 'var(--text-secondary)', fontSize: 13 }}>Review synced risk trends for field patients.</div>
-                </button>
-                <button className="glass-card" onClick={() => navigate('/twin')} style={{ textAlign: 'left' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><HeartPulse size={16} color="#8b5cf6" /> Health Twin</div>
-                    <div style={{ marginTop: 8, color: 'var(--text-secondary)', fontSize: 13 }}>Use summaries and next-step guidance during outreach.</div>
-                </button>
-                <button className="glass-card" onClick={() => navigate('/report')} style={{ textAlign: 'left' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><FileText size={16} color="#06b6d4" /> Report Scanner</div>
-                    <div style={{ marginTop: 8, color: 'var(--text-secondary)', fontSize: 13 }}>Scan reports quickly and auto-update patient memory.</div>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                    <h2>OurHealth Mode</h2>
+                    <p>Village-first workflow for patient registry, cluster mapping, visit planning, and outreach.</p>
+                </div>
+                <button className="btn btn-outline btn-sm" onClick={logout}>
+                    <LogOut size={16} /> Logout
                 </button>
             </div>
 
             <div className="glass-card animate-in" style={{ marginBottom: 16 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) auto', gap: 12, alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
-                        <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-muted)' }} />
-                        <input
-                            className="form-input"
-                            placeholder="Search name, village, phone, household..."
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            style={{ paddingLeft: 36 }}
-                        />
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: activeTab === 'patients' ? 'minmax(220px, 1fr) auto' : 'auto', gap: 12, alignItems: 'center' }}>
+                    {activeTab === 'patients' && (
+                        <div style={{ position: 'relative' }}>
+                            <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-muted)' }} />
+                            <input
+                                className="form-input"
+                                placeholder="Search name, village, phone, household..."
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                style={{ paddingLeft: 36 }}
+                            />
+                        </div>
+                    )}
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <select className="form-select" value={selectedVillage} onChange={(event) => setSelectedVillage(event.target.value)}>
                             {villageOptions.map((village) => <option key={village}>{village}</option>)}
@@ -246,29 +255,25 @@ export default function RuralMode() {
                         </button>
                     )
                 })}
-                <button className="btn btn-outline btn-sm" onClick={() => setSyncPending(0)}>
-                    {isOnline ? <Cloud size={14} /> : <CloudOff size={14} />}
-                    {isOnline ? 'Sync Now' : 'Offline Queue'} ({syncPending})
-                </button>
             </div>
 
             {showAdd && (
                 <div className="glass-card animate-in" style={{ marginBottom: 16 }}>
                     <h3 style={{ fontSize: 16, marginBottom: 12 }}>Add Patient To OurHealth</h3>
                     <div className="grid-3" style={{ gap: 12 }}>
-                        <input className="form-input" placeholder="Full name" value={newPatient.name} onChange={(event) => updateNewPatient('name', event.target.value)} />
-                        <input className="form-input" type="number" placeholder="Age" value={newPatient.age} onChange={(event) => updateNewPatient('age', event.target.value)} />
+                        <input className="form-input" placeholder="Full name" value={newPatient.name} onChange={(event) => updateNewPatient('name', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
+                        <input className="form-input" type="number" placeholder="Age" value={newPatient.age} onChange={(event) => updateNewPatient('age', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                         <select className="form-select" value={newPatient.gender} onChange={(event) => updateNewPatient('gender', event.target.value)}>
                             <option>Female</option>
                             <option>Male</option>
                             <option>Other</option>
                         </select>
-                        <input className="form-input" placeholder="Blood group" value={newPatient.blood_group} onChange={(event) => updateNewPatient('blood_group', event.target.value)} />
+                        <input className="form-input" placeholder="Blood group" value={newPatient.blood_group} onChange={(event) => updateNewPatient('blood_group', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                         <select className="form-select" value={newPatient.village} onChange={(event) => updateNewPatient('village', event.target.value)}>
                             <option value="">Village</option>
-                            {Object.keys(villageCoords).map((village) => <option key={village}>{village}</option>)}
+                            {Object.keys(villages).map((village) => <option key={village}>{village}</option>)}
                         </select>
-                        <input className="form-input" placeholder="Phone" value={newPatient.phone} onChange={(event) => updateNewPatient('phone', event.target.value)} />
+                        <input className="form-input" placeholder="Phone" value={newPatient.phone} onChange={(event) => updateNewPatient('phone', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                         <button className="btn btn-primary" onClick={addPatient}><Plus size={16} /> Save Patient</button>
@@ -300,7 +305,16 @@ export default function RuralMode() {
 
             {activeTab === 'map' && (
                 <div className="grid-2 animate-in">
-                    <ClusterMap clusters={villageClusters} selectedVillage={selectedVillage} onSelect={selectCluster} />
+                    <div>
+                        <ClusterMap clusters={villageClusters} selectedVillage={selectedVillage} onSelect={selectCluster} />
+                        <div className="glass-card" style={{ marginTop: 16 }}>
+                            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Add New Village</h3>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input className="form-input" placeholder="Village name..." value={newVillageName} onChange={(e) => setNewVillageName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addNewVillage() }} />
+                                <button className="btn btn-primary" onClick={addNewVillage}><Plus size={16} /> Add</button>
+                            </div>
+                        </div>
+                    </div>
                     <ClusterDetails cluster={selectedCluster} patients={filteredPatients} onSelectPatient={setSelectedPatient} />
                 </div>
             )}
@@ -309,32 +323,8 @@ export default function RuralMode() {
                 <VisitPanel visits={visitQueue} onSchedule={scheduleVisit} expanded />
             )}
 
-            {activeTab === 'qr' && (
-                <div className="glass-card animate-in">
-                    <h3 style={{ fontSize: 16, marginBottom: 12 }}>QR Check-in</h3>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Use quick check-in from Visit Planner to mark home visits as completed.</p>
-                    <button className="btn btn-primary" onClick={() => navigate('/visits')}>
-                        <QrCode size={16} /> Open QR Scanner
-                    </button>
-                </div>
-            )}
-
-            {activeTab === 'history' && (
-                <div className="glass-card animate-in">
-                    <h3 style={{ fontSize: 16, marginBottom: 12 }}>Previous Visits History</h3>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: 12 }}>Track previous visits and follow-up outcomes for each patient.</p>
-                    <button className="btn btn-primary" onClick={() => navigate('/history')}>
-                        <History size={16} /> Open History
-                    </button>
-                </div>
-            )}
-
-            {activeTab === 'camp' && (
-                <CampPanel campMeta={campMeta} setCampMeta={setCampMeta} onOpenAdd={() => setShowAdd(true)} />
-            )}
-
             {activeTab === 'outreach' && (
-                <OutreachPanel alerts={urgentAlerts} visits={visitQueue} syncPending={syncPending} />
+                <OutreachPanel alerts={urgentAlerts} visits={visitQueue} />
             )}
 
             {selectedPatient && (
@@ -361,7 +351,7 @@ function PatientGrid({ patients, onSelect }) {
                     <button key={patient.id} className="glass-card" onClick={() => onSelect(patient)} style={{ textAlign: 'left', border: `1px solid ${riskColor(patient.risk)}66` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                             <div>
-                                <div style={{ fontWeight: 700, fontSize: 16 }}>{patient.name}</div>
+                                <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{patient.name}</div>
                                 <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>{patient.village} | {patient.age}/{patient.gender[0]} | {patient.blood_group}</div>
                             </div>
                             <div style={{ color: riskColor(patient.risk), fontWeight: 800 }}>{patient.risk}%</div>
@@ -495,42 +485,40 @@ function VisitPanel({ visits, onSchedule, expanded = false }) {
     )
 }
 
-function CampPanel({ campMeta, setCampMeta, onOpenAdd }) {
+function OutreachPanel({ alerts, visits }) {
+    const overdue = visits.filter((visit) => visit.followupStatus === 'overdue')
     return (
-        <div className="glass-card animate-in">
-            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Camp Intake</h3>
-            <div className="grid-3" style={{ gap: 12 }}>
-                <input className="form-input" value={campMeta.location} onChange={(event) => setCampMeta({ ...campMeta, location: event.target.value })} />
-                <input className="form-input" type="date" value={campMeta.date} onChange={(event) => setCampMeta({ ...campMeta, date: event.target.value })} />
-                <input className="form-input" value={campMeta.worker} onChange={(event) => setCampMeta({ ...campMeta, worker: event.target.value })} />
+        <div className="grid-2 animate-in">
+            <div className="glass-card">
+                <h3 style={{ fontSize: 16, marginBottom: 12 }}>Priority Patients (High Risk/Flags)</h3>
+                <div style={{ display: 'grid', gap: 10 }}>
+                    {alerts.length === 0 && <div style={{ color: 'var(--text-muted)' }}>No priority patients.</div>}
+                    {alerts.map(patient => (
+                        <div key={patient.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                            <div>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{patient.name}</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{patient.village} • Risk: {patient.risk}%</div>
+                            </div>
+                            <button className="btn btn-outline btn-sm"><Phone size={14} /> Contact</button>
+                        </div>
+                    ))}
+                </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-                <button className="btn btn-primary" onClick={onOpenAdd}><UserPlus size={16} /> Register Walk-in</button>
-                <button className="btn btn-outline"><Upload size={16} /> Import CSV</button>
-                <button className="btn btn-outline"><QrCode size={16} /> Prepare QR Cards</button>
-                <button className="btn btn-outline"><FileText size={16} /> Camp Summary</button>
-            </div>
-        </div>
-    )
-}
-
-function OutreachPanel({ alerts, visits, syncPending }) {
-    const tasks = [
-        `${alerts.length} priority patients need calls today`,
-        `${visits.filter((visit) => visit.followupStatus === 'overdue').length} overdue follow-ups to reschedule`,
-        `${syncPending} offline updates waiting to sync`,
-        'Review households with repeated respiratory symptoms',
-    ]
-    return (
-        <div className="glass-card animate-in">
-            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Outreach Actions</h3>
-            <div style={{ display: 'grid', gap: 10 }}>
-                {tasks.map((task) => (
-                    <div key={task} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>{task}</span>
-                        <button className="btn btn-outline btn-sm"><Phone size={14} /> Act</button>
-                    </div>
-                ))}
+            
+            <div className="glass-card">
+                <h3 style={{ fontSize: 16, marginBottom: 12 }}>Overdue Follow-ups</h3>
+                <div style={{ display: 'grid', gap: 10 }}>
+                    {overdue.length === 0 && <div style={{ color: 'var(--text-muted)' }}>No overdue follow-ups.</div>}
+                    {overdue.map(patient => (
+                        <div key={patient.id} style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                            <div>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{patient.name}</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{patient.village} • Due: {patient.scheduledVisit}</div>
+                            </div>
+                            <button className="btn btn-outline btn-sm"><Phone size={14} /> Contact</button>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     )
@@ -555,6 +543,20 @@ function PatientModal({ patient, family, onClose, onSchedule }) {
                 <div className="glass-card" style={{ padding: 14, marginBottom: 12 }}>
                     <h4 style={{ fontSize: 14, marginBottom: 8 }}>Family Members</h4>
                     <PatientMiniList patients={family} onSelect={() => {}} empty="No linked family members." />
+                </div>
+                <div className="glass-card" style={{ padding: 14, marginBottom: 12 }}>
+                    <h4 style={{ fontSize: 14, marginBottom: 8 }}>Visit History</h4>
+                    {patient.lastVisit ? (
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(255,255,255,0.04)', padding: 10, borderRadius: 8 }}>
+                            <History size={16} color="var(--text-muted)" />
+                            <div>
+                                <div style={{ fontSize: 14 }}>Last Visit: {patient.lastVisit}</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Status: {patient.followupStatus}</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ color: 'var(--text-muted)' }}>No previous visits recorded.</div>
+                    )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <input className="form-input" type="date" defaultValue={patient.scheduledVisit} onChange={(event) => onSchedule(patient.id, event.target.value)} style={{ maxWidth: 180 }} />

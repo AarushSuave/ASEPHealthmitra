@@ -20,3 +20,16 @@ def get_db():
 def init_db():
     from models import Base as ModelBase  # noqa: F401
     ModelBase.metadata.create_all(bind=engine)
+    _ensure_user_village_column()
+
+
+def _ensure_user_village_column():
+    """Add village column to users table if missing (SQLite migration)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    if "village" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN village VARCHAR(100)"))

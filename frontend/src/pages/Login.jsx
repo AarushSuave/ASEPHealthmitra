@@ -8,7 +8,7 @@ export default function Login() {
     const [password, setPassword] = useState('')
     const [rememberMe, setRememberMe] = useState(localStorage.getItem('hm_remember_me') === 'true')
     const [showPass, setShowPass] = useState(false)
-    const [loginRole, setLoginRole] = useState('user') // user | admin | asha
+    const [loginRole, setLoginRole] = useState('user') // user | asha
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const { login } = useAuth()
@@ -29,7 +29,6 @@ export default function Login() {
         try {
             await login(email, password, loginRole)
 
-            // Persist email if rememberMe is checked
             if (rememberMe) {
                 localStorage.setItem('hm_remembered_email', email)
                 localStorage.setItem('hm_remember_me', 'true')
@@ -87,38 +86,30 @@ export default function Login() {
                         </button>
                     </div>
 
-                    <div className="auth-options">
-                        <label className="remember-me">
-                            <input
-                                type="checkbox"
-                                checked={rememberMe}
-                                onChange={e => setRememberMe(e.target.checked)}
-                            />
-                            <span>Remember Me / याद रखें</span>
-                        </label>
-                        <div className="auth-role-toggle" aria-label="Choose login type">
-                            <button
-                                type="button"
-                                className={`role-pill ${loginRole === 'user' ? 'active' : ''}`}
-                                onClick={() => setLoginRole('user')}
-                            >
-                                User उपयोगकर्ता
-                            </button>
-                            <button
-                                type="button"
-                                className={`role-pill ${loginRole === 'asha' ? 'active' : ''}`}
-                                onClick={() => setLoginRole('asha')}
-                            >
-                                ASHA समन्वयक
-                            </button>
-                            <button
-                                type="button"
-                                className={`role-pill ${loginRole === 'admin' ? 'active' : ''}`}
-                                onClick={() => setLoginRole('admin')}
-                            >
-                                Admin व्यवस्थापक
-                            </button>
-                        </div>
+                    <label className="remember-me" style={{ marginBottom: 16 }}>
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={e => setRememberMe(e.target.checked)}
+                        />
+                        <span>Remember Me / याद रखें</span>
+                    </label>
+
+                    <div className="auth-role-toggle" aria-label="Choose login type">
+                        <button
+                            type="button"
+                            className={`role-pill ${loginRole === 'user' ? 'active' : ''}`}
+                            onClick={() => setLoginRole('user')}
+                        >
+                            User उपयोगकर्ता
+                        </button>
+                        <button
+                            type="button"
+                            className={`role-pill ${loginRole === 'asha' ? 'active' : ''}`}
+                            onClick={() => setLoginRole('asha')}
+                        >
+                            ASHA समन्वयक
+                        </button>
                     </div>
 
                     <button type="submit" className="btn btn-primary btn-lg auth-btn" disabled={loading}>
@@ -128,20 +119,22 @@ export default function Login() {
                             </>
                         ) : (
                             <>
-                                <LogIn size={18} />{loginRole === 'admin'
-                                    ? ' Admin Login / प्रशासन'
-                                    : loginRole === 'asha'
-                                        ? ' ASHA Login / आशा'
-                                        : ' Login / लॉगिन'}
+                                <LogIn size={18} />
+                                {loginRole === 'asha' ? ' ASHA Login / आशा' : ' Login / लॉगिन'}
                             </>
                         )}
                     </button>
                 </form>
 
                 <div className="auth-footer">
-                    {loginRole === 'admin' && 'Admin credentials are read from admin_credentials.txt'}
                     {loginRole === 'asha' && 'ASHA coordinator credentials are read from asha_credentials.txt'}
-                    {loginRole === 'user' && <>Don't have an account? <Link to="/signup">Create Account / नया खाता बनाएँ</Link></>}
+                    {loginRole === 'user' && (
+                        <>
+                            User credentials are read from user_credentials.txt.
+                            <br />
+                            Need an account? <Link to="/signup">Create Account / नया खाता बनाएँ</Link>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

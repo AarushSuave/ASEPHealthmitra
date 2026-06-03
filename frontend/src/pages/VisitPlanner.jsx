@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Calendar, QrCode, MapPin, User, CheckCircle, Plus } from 'lucide-react'
+import { Calendar, QrCode, MapPin, User, CheckCircle } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 
 export default function VisitPlanner() {
-    const { token } = useAuth()
+    const { token, user } = useAuth()
     const [visits, setVisits] = useState([])
     const [loading, setLoading] = useState(true)
     const [showScanner, setShowScanner] = useState(false)
     const [scanResult, setScanResult] = useState(null)
-    const [activeTab, setActiveTab] = useState('upcoming') // upcoming, add
+    const [activeTab, setActiveTab] = useState('upcoming')
 
-    // Form
-    const [patientName, setPatientName] = useState('')
-    const [villageName, setVillageName] = useState('')
     const [date, setDate] = useState('')
     const [purpose, setPurpose] = useState('')
+
+    const profileName = user?.name || ''
+    const profileVillage = user?.village || ''
 
     useEffect(() => {
         fetchVisits()
@@ -32,9 +32,13 @@ export default function VisitPlanner() {
 
     const handleCreate = async (e) => {
         e.preventDefault()
+        if (!profileName || !profileVillage) {
+            alert('Please set your name and village in Profile before scheduling a visit.')
+            return
+        }
         const payload = {
-            patient_name: patientName,
-            village_name: villageName,
+            patient_name: profileName,
+            village_name: profileVillage,
             visit_date: new Date(date).toISOString(),
             purpose: purpose,
             notes: ''
@@ -44,6 +48,8 @@ export default function VisitPlanner() {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(payload)
         })
+        setDate('')
+        setPurpose('')
         setActiveTab('upcoming')
         fetchVisits()
     }
@@ -69,18 +75,18 @@ export default function VisitPlanner() {
 
     return (
         <div className="animate-in">
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                 <h2>Visit Planner / विज़िट योजना</h2>
                 <div style={{ display: 'flex', gap: 8, background: 'var(--bg-card)', padding: 4, borderRadius: 12 }}>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('upcoming')}
-                        style={{ padding: '8px 16px', borderRadius: 8, background: activeTab === 'upcoming' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'upcoming' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                        style={{ padding: '8px 16px', borderRadius: 8, background: activeTab === 'upcoming' ? 'var(--accent-teal)' : 'transparent', color: activeTab === 'upcoming' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                     >
                         Upcoming / अगली विज़िट
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('add')}
-                        style={{ padding: '8px 16px', borderRadius: 8, background: activeTab === 'add' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'add' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                        style={{ padding: '8px 16px', borderRadius: 8, background: activeTab === 'add' ? 'var(--accent-teal)' : 'transparent', color: activeTab === 'add' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                     >
                         Add Visit / नई विज़िट
                     </button>
@@ -96,20 +102,20 @@ export default function VisitPlanner() {
                         </div>
                     )}
                     {upcomingVisits.map(v => (
-                        <div key={v.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={v.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                             <div>
                                 <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <User size={18} /> {v.patient_name}
                                 </h3>
-                                <div style={{ display: 'flex', gap: 16, fontSize: 14, color: 'var(--text-secondary)' }}>
+                                <div style={{ display: 'flex', gap: 16, fontSize: 14, color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={14} /> {v.village_name}</span>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> {new Date(v.visit_date).toLocaleDateString()}</span>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> {new Date(v.visit_date).toLocaleString()}</span>
                                 </div>
                                 <div style={{ marginTop: 8, fontSize: 14, color: 'var(--text-primary)' }}>Purpose: {v.purpose}</div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => { setShowScanner(true); mockScan(v.id); }}
-                                className="btn-primary" 
+                                className="btn btn-primary"
                                 style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                             >
                                 <QrCode size={18} />
@@ -121,30 +127,34 @@ export default function VisitPlanner() {
             )}
 
             {activeTab === 'add' && (
-                <div className="glass-card" style={{ maxWidth: 500 }}>
+                <div className="glass-card" style={{ maxWidth: 520 }}>
+                    <div style={{ marginBottom: 20, padding: 14, borderRadius: 12, background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 8 }}>FROM YOUR PROFILE</div>
+                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 600 }}>
+                                <User size={16} /> {profileName || '— Set name in Profile'}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 600 }}>
+                                <MapPin size={16} /> {profileVillage || '— Set village in Profile'}
+                            </div>
+                        </div>
+                    </div>
                     <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>Patient Name</label>
-                            <input type="text" className="input-field" required value={patientName} onChange={e => setPatientName(e.target.value)} />
+                        <div className="form-group">
+                            <label className="form-label">Visit Date & Time</label>
+                            <input type="datetime-local" className="form-input" required value={date} onChange={e => setDate(e.target.value)} />
                         </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>Village Name</label>
-                            <input type="text" className="input-field" required value={villageName} onChange={e => setVillageName(e.target.value)} />
+                        <div className="form-group">
+                            <label className="form-label">Purpose</label>
+                            <input type="text" className="form-input" required value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="e.g. Follow-up checkup" />
                         </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>Visit Date</label>
-                            <input type="datetime-local" className="input-field" required value={date} onChange={e => setDate(e.target.value)} />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>Purpose</label>
-                            <input type="text" className="input-field" required value={purpose} onChange={e => setPurpose(e.target.value)} />
-                        </div>
-                        <button type="submit" className="btn-primary" style={{ marginTop: 8 }}>Schedule Visit</button>
+                        <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }} disabled={!profileName || !profileVillage}>
+                            Schedule Visit
+                        </button>
                     </form>
                 </div>
             )}
 
-            {/* QR Scanner Modal (Mock) */}
             {showScanner && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -155,7 +165,7 @@ export default function VisitPlanner() {
                         background: 'var(--bg-card)', padding: 40, borderRadius: 24, textAlign: 'center',
                         border: '1px solid var(--border-glass)', width: '90%', maxWidth: 400
                     }}>
-                        <QrCode size={64} style={{ marginBottom: 24, color: 'var(--primary-color)' }} />
+                        <QrCode size={64} style={{ marginBottom: 24, color: 'var(--accent-teal)' }} />
                         <h3 style={{ fontSize: 20, marginBottom: 16 }}>
                             {scanResult || 'Align QR Code within frame'}
                         </h3>

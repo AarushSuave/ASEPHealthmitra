@@ -52,12 +52,11 @@ export function AuthProvider({ children }) {
         formData.append('password', password)
 
         let endpoint = '/api/auth/login'
-        if (mode === 'admin') endpoint = '/api/auth/admin-login'
         if (mode === 'asha') endpoint = '/api/auth/asha-login'
 
         const res = await fetch(endpoint, { method: 'POST', body: formData })
 
-        if ((mode === 'admin' || mode === 'asha') && res.status === 404) {
+        if (mode === 'asha' && res.status === 404) {
             throw new Error('Special login endpoint not found. Restart backend (run.bat) and try again.')
         }
 

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { FileText, Camera, Mic, Activity, Users, Clock, AlertTriangle, TrendingUp, Heart, Stethoscope, MessageSquareHeart } from 'lucide-react'
+import { FileText, Activity, Users, Clock, Heart, Stethoscope, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const quickActions = [
     { icon: FileText, label: 'Scan Report / रिपोर्ट स्कैन', path: '/report', color: '#06b6d4' },
     { icon: Activity, label: 'Risk Check / जोखिम जांच', path: '/risk', color: '#f59e0b' },
     { icon: Users, label: 'OurHealth / गांव कार्य', path: '/rural', color: '#ec4899' },
-    { icon: Clock, label: 'Health Timeline / स्वास्थ्य समयरेखा', path: '/memory', color: '#3b82f6' },
+    { icon: Calendar, label: 'Visit Planner / विज़िट योजना', path: '/visits', color: '#3b82f6' },
 ]
 
 export default function Dashboard() {
@@ -71,8 +71,7 @@ export default function Dashboard() {
                             🏥 Welcome to HealthMitra Scan / हेल्थमित्र
                         </h2>
                         <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
-                            Your offline AI health assistant powered by local neural engines.
-                            Scan reports, predict health risks, and monitor vitals – all without internet.
+                            Scan reports, predict health risks, plan village visits, and track your health profile in one place.
                         </p>
                     </div>
                     <div style={{ fontSize: 64, opacity: 0.3 }}>

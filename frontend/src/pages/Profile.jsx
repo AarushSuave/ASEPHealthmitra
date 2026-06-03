@@ -86,6 +86,7 @@ export default function Profile() {
                         {user.gender && <span className="profile-tag">👤 {user.gender}</span>}
                         {user.blood_group && <span className="profile-tag blood">🩸 {user.blood_group}</span>}
                         {user.phone && <span className="profile-tag">📱 {user.phone}</span>}
+                        {user.village && <span className="profile-tag">📍 {user.village}</span>}
                     </div>
 
                     {(user.medical_conditions?.length > 0 || user.allergies?.length > 0) && (
@@ -203,6 +204,10 @@ export default function Profile() {
                                 <option value="">Select</option>
                                 {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
                             </select>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Village</label>
+                            <input className="form-input" value={form.village} onChange={e => setForm(p => ({ ...p, village: e.target.value }))} placeholder="Your village name" />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Emergency Contact</label>

@@ -20,7 +20,8 @@ class User(Base):
     medical_conditions = Column(Text)  # JSON: ["diabetes", "hypertension"]
     allergies = Column(Text)  # JSON: ["peanuts", "penicillin"]
     emergency_contact = Column(String(100))
-    role = Column(String(20), default='user') # 'user' or 'admin'
+    village = Column(String(100))
+    role = Column(String(20), default='user')
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships

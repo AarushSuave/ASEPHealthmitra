@@ -15,12 +15,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer(auto_error=False)
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
-ADMIN_CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / "admin_credentials.txt"
 ASHA_CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / "asha_credentials.txt"
-DEFAULT_ADMIN_EMAIL = "admin@healthmitra.local"
-DEFAULT_ADMIN_PASSWORD = "Admin@123"
+USER_CREDENTIALS_PATH = Path(__file__).resolve().parents[2] / "user_credentials.txt"
 DEFAULT_ASHA_EMAIL = "asha@healthmitra.local"
 DEFAULT_ASHA_PASSWORD = "Asha@123"
+DEFAULT_USER_EMAIL = "user@healthmitra.local"
+DEFAULT_USER_PASSWORD = "User@123"
 
 
 # ── Helper functions ────────────────────────────────────────────────
@@ -89,26 +89,22 @@ def _user_to_dict(user: User) -> dict:
         "medical_conditions": json.loads(user.medical_conditions) if user.medical_conditions else [],
         "allergies": json.loads(user.allergies) if user.allergies else [],
         "emergency_contact": user.emergency_contact,
+        "village": user.village,
         "role": user.role,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
 
-def _ensure_admin_credentials_file() -> tuple[str, str]:
-    """Ensure admin credentials file exists and return email/password."""
-    if not ADMIN_CREDENTIALS_PATH.exists():
-        ADMIN_CREDENTIALS_PATH.write_text(
-            (
-                "# HealthMitra Admin Credentials\n"
-                "# Change these values after first login.\n"
-                f"email={DEFAULT_ADMIN_EMAIL}\n"
-                f"password={DEFAULT_ADMIN_PASSWORD}\n"
-            ),
-            encoding="utf-8"
+def _parse_credentials_file(path: Path, default_email: str, default_password: str, header: str) -> tuple[str, str]:
+    """Read or create a key=value credentials file."""
+    if not path.exists():
+        path.write_text(
+            f"{header}\nemail={default_email}\npassword={default_password}\n",
+            encoding="utf-8",
         )
-        return DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD
+        return default_email, default_password
 
-    raw = ADMIN_CREDENTIALS_PATH.read_text(encoding="utf-8")
+    raw = path.read_text(encoding="utf-8")
     email = ""
     password = ""
     for line in raw.splitlines():
@@ -123,47 +119,25 @@ def _ensure_admin_credentials_file() -> tuple[str, str]:
         elif key == "password":
             password = value
 
-    if not email:
-        email = DEFAULT_ADMIN_EMAIL
-    if not password:
-        password = DEFAULT_ADMIN_PASSWORD
-    return email, password
+    return email or default_email, password or default_password
+
+
+def _ensure_user_credentials_file() -> tuple[str, str]:
+    return _parse_credentials_file(
+        USER_CREDENTIALS_PATH,
+        DEFAULT_USER_EMAIL,
+        DEFAULT_USER_PASSWORD,
+        "# HealthMitra User Credentials\n# Change these values after first login.",
+    )
 
 
 def _ensure_asha_credentials_file() -> tuple[str, str]:
-    """Ensure ASHA coordinator credentials file exists and return email/password."""
-    if not ASHA_CREDENTIALS_PATH.exists():
-        ASHA_CREDENTIALS_PATH.write_text(
-            (
-                "# ASHA Coordinator Credentials\n"
-                "# Change these values after first login.\n"
-                f"email={DEFAULT_ASHA_EMAIL}\n"
-                f"password={DEFAULT_ASHA_PASSWORD}\n"
-            ),
-            encoding="utf-8"
-        )
-        return DEFAULT_ASHA_EMAIL, DEFAULT_ASHA_PASSWORD
-
-    raw = ASHA_CREDENTIALS_PATH.read_text(encoding="utf-8")
-    email = ""
-    password = ""
-    for line in raw.splitlines():
-        row = line.strip()
-        if not row or row.startswith("#") or "=" not in row:
-            continue
-        key, value = row.split("=", 1)
-        key = key.strip().lower()
-        value = value.strip()
-        if key == "email":
-            email = value
-        elif key == "password":
-            password = value
-
-    if not email:
-        email = DEFAULT_ASHA_EMAIL
-    if not password:
-        password = DEFAULT_ASHA_PASSWORD
-    return email, password
+    return _parse_credentials_file(
+        ASHA_CREDENTIALS_PATH,
+        DEFAULT_ASHA_EMAIL,
+        DEFAULT_ASHA_PASSWORD,
+        "# ASHA Coordinator Credentials\n# Change these values after first login.",
+    )
 
 
 # ── Routes ──────────────────────────────────────────────────────────
@@ -212,7 +186,33 @@ async def login(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    """Login with email and password."""
+    """Login with email and password (file credentials or registered account)."""
+    file_email, file_password = _ensure_user_credentials_file()
+    if email.strip().lower() == file_email.strip().lower() and password == file_password:
+        user = db.query(User).filter(User.email == file_email).first()
+        if not user:
+            user = User(
+                name="HealthMitra User",
+                email=file_email,
+                password_hash=hash_password(file_password),
+                role="user",
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        else:
+            if user.role not in ("user",):
+                user.role = "user"
+            user.password_hash = hash_password(file_password)
+            db.commit()
+            db.refresh(user)
+        token = create_token(user.id)
+        return {
+            "token": token,
+            "user": _user_to_dict(user),
+            "message": "Login successful",
+        }
+
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -222,42 +222,6 @@ async def login(
         "token": token,
         "user": _user_to_dict(user),
         "message": "Login successful"
-    }
-
-
-@router.post("/admin-login")
-async def admin_login(
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    """Login to admin panel using credentials from local text file."""
-    expected_email, expected_password = _ensure_admin_credentials_file()
-    if email.strip().lower() != expected_email.strip().lower() or password != expected_password:
-        raise HTTPException(status_code=401, detail="Invalid admin credentials")
-
-    admin_user = db.query(User).filter(User.email == expected_email).first()
-    if not admin_user:
-        admin_user = User(
-            name="Admin User",
-            email=expected_email,
-            password_hash=hash_password(expected_password),
-            role="admin"
-        )
-        db.add(admin_user)
-        db.commit()
-        db.refresh(admin_user)
-    elif admin_user.role != "admin":
-        admin_user.role = "admin"
-        admin_user.password_hash = hash_password(expected_password)
-        db.commit()
-        db.refresh(admin_user)
-
-    token = create_token(admin_user.id)
-    return {
-        "token": token,
-        "user": _user_to_dict(admin_user),
-        "message": "Admin login successful"
     }
 
 
@@ -327,6 +291,7 @@ async def update_profile(
     medical_conditions: str = Form(None),
     allergies: str = Form(None),
     emergency_contact: str = Form(None),
+    village: str = Form(None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -347,6 +312,8 @@ async def update_profile(
         user.allergies = allergies
     if emergency_contact is not None:
         user.emergency_contact = emergency_contact
+    if village is not None:
+        user.village = village
 
     db.commit()
     db.refresh(user)

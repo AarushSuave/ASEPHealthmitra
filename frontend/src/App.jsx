@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import {
-    LayoutDashboard, FileText, Activity, Clock, UserCircle, Users, Cpu, Wifi, CircleHelp, Moon, Sun, Bone, Calendar, History
+    LayoutDashboard, FileText, Activity, UserCircle, CircleHelp, Moon, Sun, Calendar, History
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import ReportExplainer from './pages/ReportExplainer'
 import RiskPredictor from './pages/RiskPredictor'
-import HealthMemory from './pages/HealthMemory'
 import HealthTwin from './pages/HealthTwin'
 import RuralMode from './pages/RuralMode'
 import RespiratoryFaqs from './pages/RespiratoryFaqs'
@@ -16,10 +15,6 @@ import Signup from './pages/Signup'
 import Profile from './pages/Profile'
 import VisitPlanner from './pages/VisitPlanner'
 import VisitsHistory from './pages/VisitsHistory'
-import AdminLayout from './components/AdminLayout'
-import AdminDashboard from './pages/AdminDashboard'
-import AdminVillages from './pages/AdminVillages'
-import AdminPatients from './pages/AdminPatients'
 import healthmitraLogo from './assets/healthmitra-logo.jpeg'
 
 const navItems = [
@@ -28,11 +23,8 @@ const navItems = [
     { path: '/report', icon: FileText, label: 'Report Scanner / रिपोर्ट स्कैनर' },
     { section: 'Health Intelligence / स्वास्थ्य जानकारी' },
     { path: '/risk', icon: Activity, label: 'Risk Predictor / जोखिम पूर्वानुमान' },
-    { path: '/memory', icon: Clock, label: 'Health Memory / स्वास्थ्य यादें' },
     { path: '/respiratory-faqs', icon: CircleHelp, label: 'FAQs / सवाल-जवाब' },
     { path: '/twin', icon: UserCircle, label: 'Health Twin / स्वास्थ्य ट्विन' },
-    { section: 'Special Modes / विशेष मोड' },
-    { path: '/rural', icon: Users, label: 'OurHealth Mode / औरहेल्थ' },
     { section: 'Visits / मुलाक़ातें' },
     { path: '/visits', icon: Calendar, label: 'Visit Planner / विज़िट योजना' },
     { path: '/history', icon: History, label: 'Visits History / पिछली विज़िट' },
@@ -42,7 +34,6 @@ const pageTitles = {
     '/': 'OurHealth Dashboard',
     '/report': 'Medical Report Scanner',
     '/risk': 'Future Risk Predictor',
-    '/memory': 'Health Memory',
     '/respiratory-faqs': 'FAQs',
     '/twin': 'Health Twin',
     '/rural': 'OurHealth Mode',
@@ -65,21 +56,12 @@ export default function App() {
         const savedTheme = localStorage.getItem('theme_mode')
         return savedTheme === 'light' ? 'light' : 'dark'
     })
-    const [isOffline, setIsOffline] = useState(() => {
-        const saved = localStorage.getItem('app_mode')
-        return saved === null ? true : saved === 'offline'
-    })
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme
         localStorage.setItem('theme_mode', theme)
     }, [theme])
 
-    useEffect(() => {
-        localStorage.setItem('app_mode', isOffline ? 'offline' : 'online')
-    }, [isOffline])
-
-    const toggleMode = () => setIsOffline(!isOffline)
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
 
     const currentTitle = pageTitles[location.pathname] || 'HealthMitra Scan'
@@ -90,20 +72,6 @@ export default function App() {
             <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
-            </Routes>
-        )
-    }
-
-    if (user?.role === 'admin') {
-        return (
-            <Routes>
-                <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="villages" element={<AdminVillages />} />
-                    <Route path="patients" element={<AdminPatients />} />
-                    <Route path="*" element={<Navigate to="/admin" replace />} />
-                </Route>
-                <Route path="*" element={<Navigate to="/admin" replace />} />
             </Routes>
         )
     }
@@ -178,16 +146,6 @@ export default function App() {
                             </div>
                         </NavLink>
                     )}
-                    <button
-                        className={`status-badge ${isOffline ? 'offline' : 'online'}`}
-                        style={{ marginTop: 8, width: '100%' }}
-                        onClick={toggleMode}
-                        title={`Switch to ${isOffline ? 'Online' : 'Offline'} Mode`}
-                    >
-                        <span className="dot"></span>
-                        {isOffline ? <Wifi size={14} /> : <Wifi size={14} style={{ opacity: 0.7 }} />}
-                        {isOffline ? 'Offline Mode Active' : 'Online Mode Active'}
-                    </button>
                 </div>
             </aside>
 
@@ -202,18 +160,6 @@ export default function App() {
                     >
                         {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                         {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                    </button>
-                    <div className="header-chip local-ai">
-                        <Cpu size={14} />
-                        Offline AI Engine
-                    </div>
-                    <button
-                        className={`header-chip status-btn ${isOffline ? 'offline' : 'online'}`}
-                        onClick={toggleMode}
-                        title={`Switch to ${isOffline ? 'Online' : 'Offline'} Mode`}
-                    >
-                        <span className="dot"></span>
-                        {isOffline ? 'Offline' : 'Online'}
                     </button>
                     {user && (
                         <NavLink to="/profile" className="header-avatar-btn" title="My Profile">
@@ -233,7 +179,7 @@ export default function App() {
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/report" element={<ProtectedRoute><ReportExplainer /></ProtectedRoute>} />
                     <Route path="/risk" element={<ProtectedRoute><RiskPredictor /></ProtectedRoute>} />
-                    <Route path="/memory" element={<ProtectedRoute><HealthMemory /></ProtectedRoute>} />
+                    <Route path="/memory" element={<Navigate to="/" replace />} />
                     <Route path="/respiratory-faqs" element={<ProtectedRoute><RespiratoryFaqs /></ProtectedRoute>} />
                     <Route path="/twin" element={<ProtectedRoute><HealthTwin /></ProtectedRoute>} />
                     <Route path="/rural" element={<ProtectedRoute><RuralMode /></ProtectedRoute>} />
