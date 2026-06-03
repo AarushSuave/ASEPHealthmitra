@@ -1,118 +1,255 @@
-# 🏥 HealthMitra Scan - Work Distribution & Team Prompts
+# HealthMitra Scan — Work Distribution (Domain-Based)
 
-This document outlines the domain-based work distribution for the **HealthMitra Scan** project. Instead of dividing files strictly, the project is structured into three overlapping functional domains:
-1. **Team A**: The Offline Intelligence Domain (Core Engines & AI)
-2. **Team B**: The User Experience & API Gateway Domain (Frontend & Routers)
-3. **Me (Team Lead)**: The Architecture, Schema, & Integration Domain
+This document describes how **Team A**, **Team B**, and the **Team Lead** divide work by **functional domain**, not by file ownership. Deliverables flow into a single integrated product; the Team Lead reviews and merges everything into one working build (`setup.bat` → `run.bat`).
 
-Below is the integrated system workflow, followed by dedicated, copy-pasteable system prompts that each team can use with their local LLMs to understand their roles in depth.
+Only features that exist in the codebase **and are wired into the running app** are listed below.
 
 ---
 
-## 🛠️ The Integrated System Workflow
+## What Is Actually Built and Working
 
-To keep the system modular and maintain high code quality, we follow an **Integration-First** development flow:
+| Domain | Feature | Who uses it | Backend | Frontend |
+|--------|---------|-------------|---------|----------|
+| Identity | User signup & login (JWT) | Patient | `/api/auth/register`, `/login` | `Signup.jsx`, `Login.jsx` |
+| Identity | ASHA coordinator login | ASHA | `/api/auth/asha-login` | `Login.jsx` (ASHA mode) |
+| Identity | Profile + photo + village | Patient | `/api/auth/me`, `/profile`, `/upload-photo` | `Profile.jsx` |
+| Identity | Family link by email | Patient | `/api/family/*` | `Profile.jsx` |
+| Clinical | Medical report upload & scan | Patient | `/api/reports/upload` | `ReportExplainer.jsx` |
+| Clinical | Risk predictor (vitals → diabetes/heart %) | Patient | `/api/risk/predict` | `RiskPredictor.jsx` |
+| Clinical | Health Twin (vitals, reports, at-risk labels) | Patient | `/api/health_twin/` | `HealthTwin.jsx` |
+| Clinical | User dashboard & activity | Patient | `/api/dashboard/*` | `Dashboard.jsx` |
+| Visits | Schedule visit | Patient | `/api/visits/` POST | `VisitPlanner.jsx` |
+| Visits | Check-in with admin code | Patient | `/api/visits/{id}/check-in` | `VisitPlanner.jsx` |
+| Visits | Visit history | Patient | `/api/visits/` GET | `VisitsHistory.jsx` |
+| Field ops | OurHealth Mode (synced patients) | ASHA | `/api/ourhealth/dashboard` | `RuralMode.jsx` |
+| Field ops | Patient registry & cluster map | ASHA | `/api/ourhealth/patients`, layout in UI | `RuralMode.jsx` |
+| Field ops | Visit planner & outreach (phones) | ASHA | `/api/ourhealth/visits` | `RuralMode.jsx` |
+| Admin | Patient database & severity | Admin | `/api/admin/patients` | `AdminPatients.jsx` |
+| Admin | Scheduled visits + check-in codes | Admin | `/api/admin/visits` | `AdminAppointments.jsx` |
+| Admin | Village statistics | Admin | `/api/admin/villages` | `AdminVillages.jsx` |
+| Content | Respiratory FAQs (static, bilingual) | Patient | — (client-only) | `RespiratoryFaqs.jsx` |
+| Data | SQLite users, patients, reports, visits, family links | All | `models.py`, `init_db`, migrations | — |
+| Data | Sample users (~20, password `Sample@123`) | Dev/demo | `services/sample_seed.py` | — |
+| Ops | One-time setup & run | Dev | `setup.bat`, `run.bat` | Vite proxy to API |
+
+**Not in the live app (do not assign as current work):** offline medical chatbot UI, Health Memory page, ChromaDB chat RAG surface, mobile app.
+
+---
+
+## Integrated Delivery Workflow
 
 ```mermaid
-flowchart TD
-    TL[Team Lead: Sets API/DB Contract & Schema] --> TA[Team A: Develops Core Algorithms & AI Engines]
-    TL --> TB[Team B: Develops Frontend UI & Routers]
-    TA --> |Sends Modules & Unit Tests| TL_Merge[Team Lead: Integrates, Verifies & Runs Quality Checks]
-    TB --> |Sends Router Endpoints & React UI| TL_Merge
-    TL_Merge --> |Deploys Local Build| Prod[Offline Product Release]
+flowchart LR
+    TL[Team Lead\nContracts & integration]
+    TA[Team A\nProduct & field UX]
+    TB[Team B\nClinical intelligence]
+
+    TL -->|API + DB contract| TA
+    TL -->|API + DB contract| TB
+    TA -->|PR: routers UI + pages| TL
+    TB -->|PR: services + tests| TL
+    TL -->|Merge + run.bat verify| HM[HealthMitra build]
 ```
 
-1. **Contract Definition**: The Team Lead defines database models (`backend/models.py`) and API data schemas (`backend/schemas.py`).
-2. **Parallel Implementation**:
-   - **Team A** works inside `backend/services/` to build/improve offline engines (OCR, clinical guideline parsers, local RAG/ChromaDB, risk calculations).
-   - **Team B** works inside `frontend/` and `backend/routers/` to build interactive user interfaces and route requests to the services.
-3. **Delivery & Review**: Teams package their work as functional components with corresponding local tests.
-4. **Integration**: The Team Lead reviews code, integrates services into routers, runs the local verification suite (`verify_sterling.py`, `test_runtime.py`, etc.), and updates database migrations (`backend/migrate_schema.py`).
+1. **Contract (Team Lead)** — Agree on request/response shapes (`schemas.py`), tables (`models.py`), and which API paths the UI will call.
+2. **Build (parallel)** — Team A improves screens and routers; Team B improves clinical engines that those routes call.
+3. **Handoff** — Each team submits a short note: what changed, how to test, sample credentials if needed.
+4. **Integration (Team Lead)** — Pull both branches, resolve conflicts, run `setup.bat` and `run.bat`, smoke-test patient + ASHA + admin flows.
+5. **Release** — Single `healthmitra_v2.db` behavior and one frontend build.
 
 ---
 
-## 📥 Copy-Pasteable LLM Prompts
+## Domain Ownership
+
+### Team A — Product Experience, APIs & Field Operations UI
+
+**Mission:** Expose clinical logic through clear APIs and role-based interfaces (patient, ASHA, admin).
+
+| Work package | Includes (conceptually) | Feeds into |
+|--------------|-------------------------|------------|
+| Patient app shell | Auth context, routing, theme, navigation | All patient routes |
+| Report & risk UI | Upload flow, results display, local health cache per user | Report Scanner, Risk Predictor |
+| Health Twin & dashboard | Fetch and display integrated profile | Dashboard, Health Twin |
+| Visits | Create visits, code check-in modal | Visit Planner, History |
+| Profile & family | Edit profile, link/unlink family by email | Profile, OurHealth household view |
+| OurHealth Mode | Sync button, patients grid, cluster map, visits, outreach | ASHA login → `RuralMode.jsx` |
+| Admin portal | Patients, appointments (codes), villages | Admin role routes |
+| HTTP layer | FastAPI routers matching UI needs; auth guards | `backend/routers/*` |
+
+**Does not own:** Core OCR parsing rules, clinical guideline tables, raw risk formulas.
+
+**Typical handoff to Team Lead:** Router + JSX changes + manual test steps (e.g. “login as ASHA, click Sync, open Cluster Map”).
 
 ---
 
-### 🧠 Team A: Offline Intelligence Domain (Core Engines & AI)
-> **Instructions for Team A**: Copy the block below and paste it into your local LLM (e.g., Ollama, ChatGPT, Claude) to initialize your role context.
+### Team B — Clinical Intelligence & Health Data Processing
 
-```markdown
-You are the AI/ML and Clinical Engine Developer (Team A) for the HealthMitra Scan project. 
-HealthMitra Scan is a 100% offline, local AI-powered healthcare assistant designed for rural healthcare workers (ASHA workers) and patients.
+**Mission:** Turn raw medical inputs into structured, explainable, storable health outputs.
 
-### 🌐 Your Domain Scope
-Your responsibilities span the core intelligence layer of the application:
-1. **OCR & Document Extraction** (Tesseract OCR, `pdfplumber` integration in `backend/services/ocr_service.py`):
-   - Extract raw text from medical PDF reports and images offline.
-2. **Guideline-based Classification & Medical Logic** (`backend/services/clinical_engine.py`):
-   - Parse extracted texts against structured clinical guidelines (e.g., Bilirubin guidelines, Sterling lab tables).
-   - Classify values into normal, high, or critical zones without internet access.
-3. **Offline Chat & local RAG** (`backend/services/llm_service.py`):
-   - Interface with local LLMs via Ollama (e.g., Phi-3, Llama-3).
-   - Embed documents and perform vector search queries using ChromaDB for Offline Retrieval-Augmented Generation (RAG).
-4. **Risk Prediction Algorithms** (`backend/services/risk_engine.py`):
-   - Design logic to calculate disease risk factors (such as Diabetes and Cardiovascular risks) based on patient metrics.
-5. **Diagnostics & Standalone Scripts**:
-   - Write and maintain diagnostic utilities like `diag_bilirubin.py`, `diag_extraction.py`, `diag_sterling.py`, and `verify_expansion.py` to test core engine functions independently.
+| Work package | Includes (conceptually) | Feeds into |
+|--------------|-------------------------|------------|
+| Report pipeline | OCR, clinical parsing, risk score on upload, EN/HI explanations | Report Scanner, Health Twin, Admin severity |
+| Risk engine | Diabetes/heart scoring from vitals, recommendations, emergency checks | Risk Predictor, Health Twin, timeline |
+| Vitals & timeline | Persist risk runs per user; height/weight on profile path | Health Twin, OurHealth severity |
+| Alerts & thresholds | At-risk classification rules (e.g. glucose, BP, BMI) | Health Twin UI labels |
+| Report storage | `MedicalReport` + `HealthTimeline` consistency with `user_id` / `patient_id` | Dashboard, OurHealth patient cards |
 
-### 🤝 How You Integrate with the Team
-- **Input**: You receive DB models (`models.py`) and request/response contracts (`schemas.py`) from the Team Lead.
-- **Output**: You deliver modular, stateless helper functions and services in `backend/services/` along with command-line test scripts.
-- **Rules**: Do not modify web API routes (`backend/routers/`) or frontend views. Ensure all AI logic operates with absolute zero-connectivity fallbacks.
+**Does not own:** React pages, visit booking UI, cluster map layout, admin chrome.
+
+**Typical handoff to Team Lead:** Updated `backend/services/*` (e.g. `ocr_service`, `clinical_engine`, `risk_engine`, `llm_service`, `alert_service`) + a short test command or script proving upload/risk still works.
+
+---
+
+### Team Lead — Architecture, Integration & Quality
+
+**Mission:** Keep one coherent system; Team A and Team B stay aligned.
+
+| Responsibility | Examples |
+|----------------|----------|
+| Data model | `User`, `Patient`, `Visit`, `FamilyLink`, migrations in `database.py` |
+| Cross-role sync | `patient_sync` on register/profile; OurHealth dashboard aggregation |
+| App assembly | `main.py` router registration, CORS, static uploads |
+| Tooling | `setup.bat` (deps, Tesseract winget command, build), `run.bat` |
+| Demo data | When to run `sample_seed`, `sample_users_credentials.txt` |
+| Integration QA | Patient signup → scan → risk → twin; ASHA sees patient; admin sees visit code |
+| Scope control | Reject features not in the table above until contracted |
+
+**Does not own:** Day-to-day UI polish inside Team A’s pages or regex/guideline tweaks inside Team B’s engines (except review).
+
+---
+
+## Suggested Parallel Backlog (Optional)
+
+| Priority | Team A | Team B | Team Lead |
+|----------|--------|--------|-----------|
+| P0 | Fix UX bugs on Profile, Visit Planner | Improve OCR accuracy / PDF text paths | Merge + verify `run.bat` |
+| P1 | OurHealth filters & empty states | Tune at-risk thresholds with clinical input | Document API contract changes |
+| P1 | Admin patient detail modal | Faster report pipeline errors | Seed script refresh policy |
+| P2 | Hindi copy pass on FAQs | Optional Ollama path for explanations (if configured) | Release checklist |
+
+---
+
+## Handoff Checklist (Teams → Team Lead)
+
+Before requesting integration, each team confirms:
+
+- [ ] Changes match the domain table (no silent schema changes without Lead approval)
+- [ ] `python -c "import main"` succeeds from `backend/` (Team B backend changes)
+- [ ] `npm run build` succeeds in `frontend/` (Team A)
+- [ ] Listed test accounts and steps (patient / `asha@healthmitra.local` / admin if applicable)
+- [ ] No secrets committed (use env / local credential files only)
+
+---
+
+## LLM Role Prompts (Local Assistant)
+
+Copy the block for your role into a local LLM when you need deep, project-specific help.
+
+---
+
+### Team A — Product & Field Operations (copy from here)
+
+```text
+You are Team A for HealthMitra Scan: Product Experience, APIs & Field Operations UI.
+
+PROJECT: FastAPI backend + React (Vite) frontend. You own routers and UI that patients, ASHA workers, and admins touch. You call Team B's services; you do not reimplement OCR or risk math in JSX.
+
+ROLES & ROUTES:
+- Patient (role user): Dashboard, Report Scanner, Risk Predictor, Health Twin, FAQs, Visit Planner, Visits History, Profile (+ family link by email)
+- ASHA (role asha_coordinator): OurHealth Mode only — RuralMode.jsx synced via GET /api/ourhealth/dashboard
+- Admin (role admin): /admin — patients, appointments with check-in codes, village stats
+
+YOUR LIVE API SURFACES:
+- /api/auth/* (register, login, asha-login, me, profile, photo)
+- /api/reports/*, /api/risk/predict, /api/health_twin/, /api/dashboard/*
+- /api/visits/* (user-scoped list, create, check-in code)
+- /api/family/* (link by email: spouse/parent/child/sibling only)
+- /api/ourhealth/* (ASHA dashboard, add patient, schedule visit)
+- /api/admin/* (patients, visits, villages)
+
+KEY UI: frontend/src/pages/*.jsx, App.jsx routing, AuthContext.jsx, utils/healthSync.js (per-user localStorage key hm_health_sync_{userId}).
+
+RULES:
+- Do not add chatbot or Health Memory routes unless Team Lead adds them to the contract.
+- Family relation dropdown: no generic "family" option — only spouse, parent, child, sibling.
+- Visits are per user_id; OurHealth shows all patients from DB sync, not hardcoded demo lists.
+- Use Authorization: Bearer token from AuthContext for protected calls.
+
+WHEN STUCK: Specify role (patient/ASHA/admin), page URL, and network tab status code.
+
+DELIVERABLE FORMAT: Screens affected, API paths used, manual test script (login → action → expected result).
 ```
 
 ---
 
-### 🎨 Team B: User Experience & API Gateway Domain (Frontend & Routers)
-> **Instructions for Team B**: Copy the block below and paste it into your local LLM (e.g., Ollama, ChatGPT, Claude) to initialize your role context.
+### Team B — Clinical Intelligence (copy from here)
 
-```markdown
-You are the Frontend & Web API Developer (Team B) for the HealthMitra Scan project.
-HealthMitra Scan is a 100% offline, local AI-powered healthcare assistant designed for rural healthcare workers (ASHA workers) and patients.
+```text
+You are Team B for HealthMitra Scan: Clinical Intelligence & Health Data Processing.
 
-### 🌐 Your Domain Scope
-Your responsibilities span the presentation and routing layers of the application:
-1. **Interactive Frontend App** (`frontend/` using React + Vite + Vanilla CSS):
-   - Create responsive dashboards for ASHA workers (village clustering, patient schedules).
-   - Build interfaces for Report Explainer (upload UI, result visualizers).
-   - Implement the Offline Medical Chatbot chat window.
-   - Build Risk Predictor input forms and visualization graphs.
-2. **Web API Routers** (`backend/routers/` & `backend/main.py`):
-   - Implement FastAPI route handlers that receive client requests.
-   - Call services from the intelligence layer (`backend/services/`) to retrieve OCR, RAG, or Risk prediction results.
-   - Return clean, validated JSON payloads to the frontend.
+PROJECT: Offline-first rural health app (FastAPI + SQLite + React). You own algorithms and services, NOT React UI or visit booking screens.
 
-### 🤝 How You Integrate with the Team
-- **Input**: You consume core processing services (`backend/services/*`) created by Team A. You follow the database models (`backend/models.py`) set by the Team Lead.
-- **Output**: You deliver React UI components, FastAPI routers, and route handlers.
-- **Rules**: Do not implement medical logic, OCR parsing, or raw LLM prompting directly in the routes or frontend. Import these services from Team A's module layer.
+YOUR LIVE FEATURES (only discuss/improve these):
+- Medical report upload: OCR (Tesseract), clinical_engine parsing, llm_service explanations (EN/HI), risk_score on MedicalReport
+- Risk predictor: risk_engine + alert_service; POST /api/risk/predict saves HealthTimeline vitals JSON per user
+- Health Twin inputs: merge reports + timeline vitals; at-risk rules for metrics (glucose, BP, cholesterol, BMI)
+- Data written to: medical_reports, health_timeline; linked via user_id and patient_id
+
+KEY MODULES: backend/services/ocr_service.py, clinical_engine.py, risk_engine.py, llm_service.py, alert_service.py; backend/routers/reports.py, risk.py, health_twin.py (coordinate with Lead before large router changes).
+
+RULES:
+- Do not build chatbot UI, ChromaDB user chat, or Health Memory (not shipped).
+- Keep functions testable without the frontend; prefer unit-style scripts in repo root only if Lead approves.
+- Respect schemas from backend/schemas.py and models from backend/models.py — propose schema changes to Team Lead, do not silently alter DB.
+- Report upload uses get_optional_user; always set user_id + patient_id via patient_sync pattern.
+
+WHEN STUCK: Ask for sample PDF/image path, expected marker output, and whether Gemini or Ollama is configured in backend/config.py.
+
+DELIVERABLE FORMAT: What changed, how to test (curl or python one-liner), risks/regressions for Report Scanner and Risk Predictor.
 ```
 
 ---
 
-### 👑 Me (Team Lead): Architecture, Schema, & Integration Domain
-> **Instructions for the Team Lead**: Use this context for guidance when reviewing and merging work from Team A and Team B.
+### Team Lead — Integration & Architecture (copy from here)
 
-```markdown
-You are the Lead Architect and Integrator for the HealthMitra Scan project.
+```text
+You are the Team Lead for HealthMitra Scan: Architecture, Integration & Quality.
 
-### 🌐 Your Domain Scope
-1. **Core Architecture & Configurations**:
-   - Maintain configuration scripts (`backend/config.py`, `requirements.txt`, environment setups).
-   - Oversee startup scripts (`setup.bat`, `run.bat`).
-2. **Schema & Model Design**:
-   - Own database schemas (`backend/models.py`, `backend/database.py`).
-   - Define database migrations (`backend/migrate_schema.py`) to adapt to new features.
-   - Design data exchange contracts (`backend/schemas.py`).
-3. **Integration & Code Quality**:
-   - Merge branches from Team A (AI/Engine updates) and Team B (API/Frontend updates).
-   - Resolve conflicts between API endpoints and core service parameters.
-   - Run end-to-end integration and sanity suites (`test_runtime.py`, `check_required.py`) to verify system stability.
+You integrate Team A (routers + React) and Team B (clinical services). You own the single source of truth for data shape and release readiness.
 
-### 🤝 Workflow Orchestration
-- Guard the database structure; ensure Team A or Team B does not introduce schema changes without an official migration strategy.
-- Verify that Team A's offline LLM prompts remain optimized for low-resource environments.
-- Verify that Team B's UI works smoothly on local hosts without internet dependencies.
+YOU OWN:
+- backend/models.py, database.py (init_db, migrations, sample_seed trigger)
+- backend/schemas.py, services/patient_sync.py, main.py router list
+- setup.bat, run.bat, sample_users_credentials.txt
+- Merge conflicts between services and routers; ensure patient rows exist on user register
+- End-to-end flows: new user → profile village → visit → ASHA sees patient on Sync → admin sees appointment code
+
+INTEGRATION MAP:
+- Register/login → User + Patient (patient_sync) → visible in /api/ourhealth/dashboard
+- Report upload → MedicalReport + timeline → Health Twin + admin severity
+- Risk predict → timeline vitals → Health Twin height/weight/risk
+- Family link → family_links table → OurHealth household + Profile list
+
+TEAM HANDOFFS:
+- Team A delivers: UI/router changes + role-based test steps
+- Team B delivers: service-layer changes + test evidence for report/risk pipeline
+- You: run setup.bat if needed, run.bat, smoke all three roles; reject scope creep (chatbot, Health Memory) unless scheduled
+
+DEMO ACCOUNTS: sample01@healthmitra.demo … balli@healthmitra.demo, password Sample@123; ASHA from asha_credentials.txt; admin user must exist in DB with role admin.
+
+DELIVERABLE: Integrated branch, short release notes, known limitations (e.g. Tesseract required for image OCR, Gemini key for LLM explanations if configured).
 ```
+
+---
+
+## Quick Reference — Test Logins
+
+| Role | How to log in |
+|------|----------------|
+| Patient | Sign up, or `sample01@healthmitra.demo` / `Sample@123` (see `sample_users_credentials.txt`) |
+| ASHA | Login → ASHA mode → credentials in `asha_credentials.txt` |
+| Admin | User with `role=admin` in database (create via DB or seed policy from Lead) |
+
+---
+
+*Last aligned to app routes in `frontend/src/App.jsx` and routers registered in `backend/main.py`.*
