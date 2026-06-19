@@ -1,4 +1,4 @@
-"""Vendor-neutral hardware detection for local AI inference."""
+"""Vendor-neutral hardware detection for local inference."""
 
 from __future__ import annotations
 

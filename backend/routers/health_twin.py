@@ -8,7 +8,7 @@ from services.ocr_service import MEDICAL_PATTERNS
 import re
 import json
 
-router = APIRouter(prefix="/api/health_twin", tags=["AI Health Twin"])
+router = APIRouter(prefix="/api/health_twin", tags=["Health Twin"])
 
 
 def classify_metric_risk(key: str, current) -> str:

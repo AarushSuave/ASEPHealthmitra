@@ -32,6 +32,10 @@ except ImportError:
 
 from services.clinical_engine import process_clinical_results, ClinicalReport
 
+
+def _lab_ref(config: dict) -> str:
+    return config.get("reference_label") or str(config.get("normal_range", ""))
+
 # ── Configure Tesseract path (Windows) ──────────────────────────────
 if TESSERACT_AVAILABLE:
     try:
@@ -47,37 +51,44 @@ MEDICAL_PATTERNS = {
     "Hemoglobin": {
         "pattern": r"(?:\bhemoglobin\b|\bhb\b|\bhgb\b)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (12.0, 17.0),
-        "unit": "g/dL"
+        "unit": "g/dL",
+        "reference_label": "M: ≥13.0, F: ≥12.0 (WHO)"
     },
     "Fasting Blood Sugar": {
         "pattern": r"(?:\bfasting\s*blood\s*sugar\b|\bfbs\b|\bglucose\s*fasting\b)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (70.0, 100.0),
-        "unit": "mg/dL"
+        "unit": "mg/dL",
+        "reference_label": "<100 mg/dL fasting (ADA)"
     },
     "HbA1c": {
         "pattern": r"(?:\bhba1c\b|\bglycated\s*hemoglobin\b|\ba1c\b)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (4.0, 5.7),
-        "unit": "%"
+        "unit": "%",
+        "reference_label": "<5.7% (ADA)"
     },
     "Total Cholesterol": {
         "pattern": r"(?<!hdl\s)(?<!ldl\s)\bcholesterol\b(?![\s,:\(\)\/\.\-a-z]*ratio)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (0.0, 200.0),
-        "unit": "mg/dL"
+        "unit": "mg/dL",
+        "reference_label": "<200 mg/dL desirable (ACC/AHA)"
     },
     "LDL Cholesterol": {
         "pattern": r"(?:\bldl\b|low\s*density|\bldl\s*cholesterol\b|\bldl\-c\b)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (0.0, 100.0),
-        "unit": "mg/dL"
+        "unit": "mg/dL",
+        "reference_label": "<100 mg/dL optimal (ACC/AHA)"
     },
     "HDL Cholesterol": {
         "pattern": r"(?:\bhdl\b|high\s*density|\bhdl\s*cholesterol\b|\bhdl\-c\b)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (40.0, 100.0),
-        "unit": "mg/dL"
+        "unit": "mg/dL",
+        "reference_label": "M: ≥40, F: ≥50 mg/dL (ACC/AHA)"
     },
     "Triglycerides": {
         "pattern": r"(?:\btriglycerides\b|\btriglyceride\b|\btg\b|\btrig\b)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (0.0, 150.0),
-        "unit": "mg/dL"
+        "unit": "mg/dL",
+        "reference_label": "<150 mg/dL (ACC/AHA)"
     },
     "Lp(a)": {
         "pattern": r"(?:lp\(a\)|lipoprotein\s*\(a\))[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
@@ -91,13 +102,15 @@ MEDICAL_PATTERNS = {
     },
     "eGFR": {
         "pattern": r"(?:\begfr\b|estimated\s*gfr|\bgfr\b)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
-        "normal_range": (60.0, 200.0),
-        "unit": "mL/min/1.73m²"
+        "normal_range": (90.0, 200.0),
+        "unit": "mL/min/1.73m²",
+        "reference_label": "≥90 mL/min/1.73m² (NKF)"
     },
     "SGPT": {
         "pattern": r"(?:\bsgpt\b|\balt\b|alanine)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
-        "normal_range": (7.0, 56.0),
-        "unit": "U/L"
+        "normal_range": (7.0, 40.0),
+        "unit": "U/L",
+        "reference_label": "≤40 U/L (ALT)"
     },
     "SGOT": {
         "pattern": r"(?:\bsgot\b|\bast\b|aspartate)[\s,:\(\)\/\.\-a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
@@ -111,13 +124,15 @@ MEDICAL_PATTERNS = {
     },
     "TSH": {
         "pattern": r"(?:\btsh\b|thyroid\s*stimulating)[\s,:\(\)a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
-        "normal_range": (0.4, 4.0),
-        "unit": "mIU/L"
+        "normal_range": (0.4, 4.5),
+        "unit": "mIU/L",
+        "reference_label": "0.4–4.5 mIU/L"
     },
     "Vitamin D": {
         "pattern": r"(?:vitamin\s*d|vit\s*d|25-oh)[\s,:\(\)a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (30.0, 100.0),
-        "unit": "ng/mL"
+        "unit": "ng/mL",
+        "reference_label": "30–100 ng/mL sufficient (Endocrine Society)"
     },
     "Vitamin B12": {
         "pattern": r"(?:vitamin\s*b12|vit\s*b12|cobalamin)[\s,:\(\)a-z]{0,25}?(?<![a-z])(\d+\.?\d*)\b",
@@ -316,7 +331,7 @@ def _extract_structured_from_pdf(file_path: str) -> List[Dict[str, Any]]:
                                         "parameter": name,
                                         "value": val,
                                         "unit": config["unit"],
-                                        "lab_reference_range": str(config.get("normal_range")),
+                                        "lab_reference_range": _lab_ref(config),
                                         "section": "Laboratory"
                                     })
                                     break
@@ -394,7 +409,7 @@ def _text_from_pdf(file_path: str) -> str:
         return ""
 
 
-def extract_text_from_file(file_path: str) -> dict:
+def extract_text_from_file(file_path: str, patient_gender: str = "male") -> dict:
     """
     Unified extraction pipeline for HealthMitra Report Intelligence Engine.
     Pipeline: Structured PDF -> OCR -> Deterministic Validation.
@@ -440,7 +455,7 @@ def extract_text_from_file(file_path: str) -> dict:
                                 "parameter": name,
                                 "value": val,
                                 "unit": config["unit"],
-                                "lab_reference_range": str(config["normal_range"]),
+                                "lab_reference_range": _lab_ref(config),
                                 "section": "Laboratory"
                             })
                         except: continue
@@ -473,7 +488,7 @@ def extract_text_from_file(file_path: str) -> dict:
                             "parameter": name,
                             "value": val,
                             "unit": config["unit"],
-                            "lab_reference_range": str(config["normal_range"]),
+                            "lab_reference_range": _lab_ref(config),
                             "section": "Laboratory"
                         })
                     except: continue
@@ -486,7 +501,10 @@ def extract_text_from_file(file_path: str) -> dict:
         }
 
     # Pass to Clinical Engine
-    clinical_report: ClinicalReport = process_clinical_results(structured_findings)
+    clinical_report: ClinicalReport = process_clinical_results(
+        structured_findings,
+        patient_context={"gender": (patient_gender or "male").lower()},
+    )
 
     return {
         "report": clinical_report.model_dump(),

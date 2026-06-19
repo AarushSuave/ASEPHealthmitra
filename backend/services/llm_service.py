@@ -88,12 +88,13 @@ def explain_report(report_data: dict, language: str = "en") -> str:
     Explain structured clinical report results in simple language.
     LLM used ONLY for explanation, NEVER for classification.
     """
+    language = "en"
     if _check_ollama_running():
         model = _get_available_model()
         if model:
             try:
-                lang_name = "English" if language == "en" else "Hindi"
-                lang_instruction = "in simple English" if language == "en" else "in simple Hindi (Devanagari script)"
+                lang_name = "English"
+                lang_instruction = "in simple English"
 
                 # Masked structured data for LLM
                 masked_data = {
@@ -103,7 +104,7 @@ def explain_report(report_data: dict, language: str = "en") -> str:
                     "incomplete": report_data.get("incomplete", [])
                 }
 
-                prompt = f"""You are HealthMitra, a medical explainer.
+                prompt = f"""You are HealthMitra, a medical report explainer.
 Briefly explain these clinical findings {lang_instruction}:
 {json.dumps(masked_data, indent=1)}
 
@@ -111,7 +112,7 @@ Rules:
 - 2-3 sentences max.
 - Simple terms. No jargon.
 - Use {lang_name}.
-- End with: "Disclaimer: AI info only, consult a doctor."
+- End with: "Disclaimer: For information only — consult a doctor."
 """
 
                 payload = {
@@ -143,14 +144,15 @@ def answer_health_question(question: str, language: str = "en", context: str = "
     Answer a health-related question using LLM.
     Uses Ollama if available, falls back to generic response.
     """
+    language = "en"
     if _check_ollama_running():
         model = _get_available_model()
         if model:
             try:
-                lang_instruction = "in English" if language == "en" else "in Hindi (Devanagari script)"
+                lang_instruction = "in English"
                 context_text = f"\nPatient context: {context}" if context else ""
 
-                prompt = f"""You are HealthMitra, a caring AI health assistant for Indian patients.
+                prompt = f"""You are HealthMitra, a health information assistant for Indian patients.
 Answer the following health question {lang_instruction} in a helpful, empathetic manner.
 {context_text}
 
@@ -159,8 +161,7 @@ Important guidelines:
 - Mention when to see a doctor
 - Reference Indian dietary habits and lifestyle where relevant
 - Keep response concise (150-250 words)
-- Use emojis for visual clarity
-- Always add a disclaimer that this is AI advice, not a replacement for a real doctor
+- Always add a disclaimer that this is general information, not a replacement for a doctor
 
 Question: {question}
 

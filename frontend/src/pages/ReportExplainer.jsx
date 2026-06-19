@@ -1,15 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../AuthContext'
-import { useLanguage } from '../LanguageContext'
 import { saveLatestReport } from '../utils/healthSync'
 import {
-    Upload, FileText, AlertTriangle, CheckCircle, Languages, Activity,
-    ChevronDown, ChevronUp, Info, ShieldCheck, HeartPulse, List, Trash2, History
+    AlertTriangle, ChevronDown, ChevronUp, Info, ShieldCheck, HeartPulse, List, Trash2, History, FileText
 } from 'lucide-react'
 
 export default function ReportExplainer() {
     const { user, token } = useAuth()
-    const { lang, t } = useLanguage()
     const [file, setFile] = useState(null)
     const [loading, setLoading] = useState(false)
     const [result, setResult] = useState(null)
@@ -53,14 +50,13 @@ export default function ReportExplainer() {
     const handleUpload = async () => {
         if (!file) return
         if (!token) {
-            setError(t('Please log in to upload and save reports.', 'रिपोर्ट अपलोड करने के लिए लॉग इन करें।'))
+            setError('Please log in to upload and save reports.')
             return
         }
         setLoading(true)
         setError(null)
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('language', lang)
 
         try {
             const res = await fetch('/api/reports/upload', {
@@ -69,9 +65,7 @@ export default function ReportExplainer() {
                 body: formData,
             })
             const data = await res.json()
-            if (!res.ok) {
-                throw new Error(data.detail || `Server error: ${res.status}`)
-            }
+            if (!res.ok) throw new Error(data.detail || `Server error: ${res.status}`)
             setResult(data)
             if (user?.id) {
                 saveLatestReport(user.id, {
@@ -86,13 +80,13 @@ export default function ReportExplainer() {
             await loadHistory()
         } catch (err) {
             console.error('Report upload failed:', err)
-            setError(err.message || t('Processing failed. Check backend connection.', 'प्रसंस्करण विफल।'))
+            setError(err.message || 'Processing failed. Check backend connection.')
         }
         setLoading(false)
     }
 
     const handleDelete = async (reportId) => {
-        if (!window.confirm(t('Delete this report permanently?', 'इस रिपोर्ट को स्थायी रूप से हटाएं?'))) return
+        if (!window.confirm('Delete this report permanently?')) return
         try {
             const res = await fetch(`/api/reports/${reportId}`, {
                 method: 'DELETE',
@@ -122,9 +116,9 @@ export default function ReportExplainer() {
             </div>
             <div className="param-value">
                 <span className="val">{param.value} {param.unit}</span>
-                <span className="ref">Target: {param.guideline_reference}</span>
+                <span className="ref">Reference: {param.guideline_reference}</span>
             </div>
-            <div className={`param-status status-${param.status.toLowerCase()}`}>
+            <div className={`param-status status-${param.status.toLowerCase().replace(/\s+/g, '-')}`}>
                 {param.status}
             </div>
         </div>
@@ -136,11 +130,8 @@ export default function ReportExplainer() {
     return (
         <div className="clinical-engine">
             <div className="page-header">
-                <h2>{t('Clinical Report Intelligence Engine', 'नैदानिक रिपोर्ट इंटेलिजेंस')}</h2>
-                <p>{t(
-                    'Real Tesseract OCR analysis following ADA, AHA, and WHO medical guidelines.',
-                    'ADA, AHA और WHO दिशानिर्देशों के अनुसार Tesseract OCR विश्लेषण।'
-                )}</p>
+                <h2>Clinical Report Scanner</h2>
+                <p>Tesseract OCR analysis using ADA, AHA, and WHO clinical reference ranges.</p>
             </div>
 
             <div className="grid-2" style={{ marginBottom: 24 }}>
@@ -154,22 +145,20 @@ export default function ReportExplainer() {
                             <>
                                 <div className="upload-icon">📄</div>
                                 <h3>{file.name}</h3>
-                                <p>{(file.size / 1024).toFixed(1)} KB – {t('Click to change', 'बदलने के लिए क्लिक करें')}</p>
+                                <p>{(file.size / 1024).toFixed(1)} KB – Click to change</p>
                             </>
                         ) : (
                             <>
                                 <div className="upload-icon">🧬</div>
-                                <h3>{t('Upload Clinical Lab Report', 'चिकित्सा लैब रिपोर्ट अपलोड करें')}</h3>
-                                <p>{t('PDF/Images – Tesseract OCR Processing', 'PDF/छवियाँ – Tesseract OCR')}</p>
+                                <h3>Upload Clinical Lab Report</h3>
+                                <p>PDF or image – processed with Tesseract OCR</p>
                             </>
                         )}
                     </div>
 
-                    <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                        <button className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={handleUpload} disabled={!file || loading}>
-                            {loading ? <><span className="spinner" style={{ width: 18, height: 18 }} /> {t('Analyzing...', 'विश्लेषण...')}</> : <><ShieldCheck size={18} /> {t('Analyze Report', 'रिपोर्ट विश्लेषण')}</>}
-                        </button>
-                    </div>
+                    <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 16 }} onClick={handleUpload} disabled={!file || loading}>
+                        {loading ? <><span className="spinner" style={{ width: 18, height: 18 }} /> Analyzing...</> : <><ShieldCheck size={18} /> Analyze Report</>}
+                    </button>
 
                     {error && (
                         <div className="error-banner" style={{ marginTop: 12 }}>
@@ -179,12 +168,12 @@ export default function ReportExplainer() {
 
                     <div style={{ marginTop: 20 }}>
                         <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <History size={14} /> {t('Uploaded Reports', 'अपलोड की गई रिपोर्ट')}
+                            <History size={14} /> Uploaded Reports
                         </h4>
                         {historyLoading ? (
-                            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{t('Loading...', 'लोड हो रहा है...')}</p>
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading...</p>
                         ) : history.length === 0 ? (
-                            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{t('No reports yet.', 'अभी कोई रिपोर्ट नहीं।')}</p>
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No reports yet.</p>
                         ) : (
                             history.map((r) => (
                                 <div key={r.id} className="report-history-item">
@@ -195,7 +184,7 @@ export default function ReportExplainer() {
                                             {r.risk_level ? ` · ${r.risk_level}` : ''}
                                         </div>
                                     </div>
-                                    <button className="btn btn-outline btn-sm" onClick={() => handleDelete(r.id)} title={t('Delete', 'हटाएं')}>
+                                    <button className="btn btn-outline btn-sm" onClick={() => handleDelete(r.id)} title="Delete">
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
@@ -223,29 +212,29 @@ export default function ReportExplainer() {
                                         <div className="gauge-number" style={{ color: getSeverityColor(cvRisk.score >= 60 ? 2 : cvRisk.score >= 30 ? 1 : 0) }}>
                                             {cvRisk.score}%
                                         </div>
-                                        <div className="gauge-label">{t('Clinical Risk', 'नैदानिक जोखिम')}</div>
+                                        <div className="gauge-label">Clinical Risk</div>
                                     </div>
                                 </div>
                                 <div className="risk-badge" style={{ background: `${getSeverityColor(cvRisk.score >= 60 ? 2 : 1)}20`, color: getSeverityColor(cvRisk.score >= 60 ? 2 : 1) }}>
-                                    {cvRisk.level} {t('Risk', 'जोखिम')} ({cvRisk.message})
+                                    {cvRisk.level} Risk ({cvRisk.message})
                                 </div>
                                 {cvRisk.measured?.length > 0 && (
                                     <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
-                                        {t('Markers used', 'उपयोग किए गए मार्कर')}: {cvRisk.measured.join(', ')}
+                                        Markers used: {cvRisk.measured.join(', ')}
                                     </p>
                                 )}
                             </>
                         ) : (
                             <div style={{ textAlign: 'center', color: '#f59e0b' }}>
                                 <AlertTriangle size={48} strokeWidth={1} style={{ marginBottom: 12 }} />
-                                <h4>{t('Insufficient Data', 'अपर्याप्त डेटा')}</h4>
-                                <p style={{ fontSize: 13, padding: '0 20px' }}>{cvRisk.message || t('Could not calculate risk score.', 'जोखिम स्कोर नहीं निकाला जा सका।')}</p>
+                                <h4>Insufficient Data</h4>
+                                <p style={{ fontSize: 13, padding: '0 20px' }}>{cvRisk.message || 'Could not calculate risk score.'}</p>
                             </div>
                         )
                     ) : (
                         <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                             <HeartPulse size={48} strokeWidth={1} style={{ marginBottom: 12, opacity: 0.3 }} />
-                            <p style={{ fontSize: 14 }}>{t('Waiting for clinical data upload...', 'रिपोर्ट अपलोड की प्रतीक्षा...')}</p>
+                            <p style={{ fontSize: 14 }}>Waiting for report upload...</p>
                         </div>
                     )}
                 </div>
@@ -256,7 +245,7 @@ export default function ReportExplainer() {
                     {result.report.red_flags.length > 0 && (
                         <div className="category-section red-flags">
                             <div className="category-header" onClick={() => toggleSection('red_flags')}>
-                                <h4>🔴 {t('RED FLAG MARKERS', 'खतरे के संकेत')} ({result.report.red_flags.length})</h4>
+                                <h4>🔴 RED FLAG MARKERS ({result.report.red_flags.length})</h4>
                                 {expandedSections.red_flags ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                             </div>
                             {expandedSections.red_flags && (
@@ -270,7 +259,7 @@ export default function ReportExplainer() {
                     {result.report.borderline.length > 0 && (
                         <div className="category-section borderline">
                             <div className="category-header" onClick={() => toggleSection('borderline')}>
-                                <h4>🟡 {t('BORDERLINE VALUES', 'सीमा पर मान')} ({result.report.borderline.length})</h4>
+                                <h4>🟡 BORDERLINE VALUES ({result.report.borderline.length})</h4>
                                 {expandedSections.borderline ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                             </div>
                             {expandedSections.borderline && (
@@ -284,7 +273,7 @@ export default function ReportExplainer() {
                     {result.report.incomplete.length > 0 && (
                         <div className="category-section incomplete">
                             <div className="category-header" onClick={() => toggleSection('incomplete')}>
-                                <h4>⚠ {t('INCOMPLETE DATA', 'अधूरा डेटा')} ({result.report.incomplete.length})</h4>
+                                <h4>⚠ INCOMPLETE DATA ({result.report.incomplete.length})</h4>
                                 {expandedSections.incomplete ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                             </div>
                             {expandedSections.incomplete && (
@@ -293,11 +282,9 @@ export default function ReportExplainer() {
                                         <div key={i} className="parameter-row" style={{ borderLeft: '4px solid #94a3b8', background: 'rgba(148,163,184,0.08)' }}>
                                             <div className="param-info">
                                                 <span className="param-name">{p.parameter}</span>
-                                                <span className="param-meta">{t('Parsing incomplete', 'पार्सिंग अधूरी')}</span>
+                                                <span className="param-meta">Parsing incomplete</span>
                                             </div>
-                                            <div className="param-value" style={{ color: '#64748b' }}>
-                                                {t('Value Missing', 'मान अनुपलब्ध')}
-                                            </div>
+                                            <div className="param-value" style={{ color: '#64748b' }}>Value Missing</div>
                                         </div>
                                     ))}
                                 </div>
@@ -307,7 +294,7 @@ export default function ReportExplainer() {
 
                     <div className="category-section normal">
                         <div className="category-header" onClick={() => toggleSection('normal')}>
-                            <h4>🟢 {t('NORMAL PARAMETERS', 'सामान्य मान')} ({result.report.normal.length})</h4>
+                            <h4>🟢 NORMAL PARAMETERS ({result.report.normal.length})</h4>
                             {expandedSections.normal ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </div>
                         {expandedSections.normal && (
@@ -315,7 +302,7 @@ export default function ReportExplainer() {
                                 {result.report.normal.length > 0 ? (
                                     result.report.normal.map((p, i) => renderParameterCard(p, i))
                                 ) : (
-                                    <p style={{ padding: 12, fontSize: 13, color: 'var(--text-muted)' }}>{t('No normal parameters identified.', 'कोई सामान्य मान नहीं मिला।')}</p>
+                                    <p style={{ padding: 12, fontSize: 13, color: 'var(--text-muted)' }}>No normal parameters identified.</p>
                                 )}
                             </div>
                         )}
@@ -323,21 +310,21 @@ export default function ReportExplainer() {
 
                     <div className="grid-2" style={{ marginTop: 16 }}>
                         <div className="glass-card">
-                            <h4 className="section-title"><List size={16} /> {t('Safe Lifestyle Remedies', 'सुरक्षित जीवनशैली सुझाव')}</h4>
+                            <h4 className="section-title"><List size={16} /> Safe Lifestyle Remedies</h4>
                             <ul className="remedies-list">
                                 {result.report.remedies.map((remedy, i) => (
                                     <li key={i}>{remedy}</li>
                                 ))}
                             </ul>
                             <p className="disclaimer-note">
-                                <Info size={12} /> {t('Lifestyle suggestions only. Consult a doctor for diagnosis.', 'केवल जीवनशैली सुझाव। निदान के लिए डॉक्टर से consult करें।')}
+                                <Info size={12} /> Lifestyle suggestions only. Consult a doctor for diagnosis.
                             </p>
                         </div>
 
                         <div className="glass-card">
-                            <h4 className="section-title"><Languages size={16} /> {lang === 'en' ? 'Clinical Explanation' : 'नैदानिक विवरण'}</h4>
+                            <h4 className="section-title"><FileText size={16} /> Report Summary</h4>
                             <div className="explanation-text" style={{ fontSize: 14, lineHeight: 1.6 }}>
-                                {lang === 'en' ? result.explanation_en : result.explanation_hi}
+                                {result.explanation_en}
                             </div>
                         </div>
                     </div>

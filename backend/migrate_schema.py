@@ -40,6 +40,17 @@ def migrate():
     else:
         print("'remedies' column already exists.")
 
+    if "lab_name" not in columns:
+        print("Adding 'lab_name' column to 'medical_reports'...")
+        try:
+            cursor.execute("ALTER TABLE medical_reports ADD COLUMN lab_name VARCHAR(200)")
+            conn.commit()
+            print("Successfully added 'lab_name' column.")
+        except Exception as e:
+            print(f"Error adding lab_name: {e}")
+    else:
+        print("'lab_name' column already exists.")
+
     # Check columns in users
     cursor.execute("PRAGMA table_info(users)")
     user_columns = [row[1] for row in cursor.fetchall()]

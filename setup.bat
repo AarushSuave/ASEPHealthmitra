@@ -120,7 +120,7 @@ if not exist "%BACKEND_DIR%\uploads\profiles" mkdir "%BACKEND_DIR%\uploads\profi
 echo [OK] Local model storage: %MODELS_DIR%
 echo.
 
-echo [5/7] X-ray AI models removed.
+echo [5/7] Skipping optional imaging models.
 echo.
 
 echo [6/7] Checking Tesseract OCR (one-time install)...

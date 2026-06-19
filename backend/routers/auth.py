@@ -240,35 +240,55 @@ async def asha_login(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    """Login as ASHA coordinator using local text credentials."""
+    """Login as ASHA coordinator using asha_credentials.txt or registered ASHA account."""
     expected_email, expected_password = _ensure_asha_credentials_file()
-    if email.strip().lower() != expected_email.strip().lower() or password != expected_password:
-        raise HTTPException(status_code=401, detail="Invalid ASHA coordinator credentials")
+    email_clean = email.strip()
+    email_norm = email_clean.lower()
+    expected_norm = expected_email.strip().lower()
+
+    credentials_match = (
+        email_norm == expected_norm and password == expected_password
+    )
 
     asha_user = db.query(User).filter(User.email == expected_email).first()
     if not asha_user:
-        asha_user = User(
-            name="ASHA Coordinator",
-            email=expected_email,
-            password_hash=hash_password(expected_password),
-            role="asha_coordinator"
-        )
-        db.add(asha_user)
-        db.commit()
-        db.refresh(asha_user)
-    else:
-        if asha_user.role != "asha_coordinator":
+        asha_user = db.query(User).filter(
+            User.email.ilike(email_clean)
+        ).first()
+
+    if credentials_match:
+        if not asha_user:
+            asha_user = User(
+                name="ASHA Coordinator",
+                email=expected_email,
+                password_hash=hash_password(expected_password),
+                role="asha_coordinator",
+            )
+            db.add(asha_user)
+        else:
             asha_user.role = "asha_coordinator"
-        asha_user.password_hash = hash_password(expected_password)
+            asha_user.password_hash = hash_password(expected_password)
         db.commit()
         db.refresh(asha_user)
+    elif asha_user and asha_user.role == "asha_coordinator" and verify_password(password, asha_user.password_hash):
+        pass
+    else:
+        raise HTTPException(status_code=401, detail="Invalid ASHA coordinator credentials")
 
     token = create_token(asha_user.id)
     return {
         "token": token,
         "user": _user_to_dict(asha_user),
-        "message": "ASHA coordinator login successful"
+        "message": "ASHA coordinator login successful",
     }
+
+
+@router.get("/credentials-hint")
+def credentials_hint():
+    """Return default login emails from credential files (passwords stay local)."""
+    user_email, _ = _ensure_user_credentials_file()
+    asha_email, _ = _ensure_asha_credentials_file()
+    return {"user_email": user_email, "asha_email": asha_email}
 
 
 @router.get("/me")

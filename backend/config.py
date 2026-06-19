@@ -29,7 +29,7 @@ JWT_EXPIRY_HOURS = 72
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi3")
 
-# HealthMitra AI uses Gemini only.
+# Gemini API settings (optional report explanations)
 GEMINI_API_KEY = _clean_env("GEMINI_API_KEY", "AIzaSyBl6K7mPmwbEEmrUXWemi_Zy98an5rBzLQ")
 
 # Tesseract OCR settings

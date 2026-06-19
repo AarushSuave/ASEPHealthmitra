@@ -40,10 +40,14 @@ async def upload_report(
             f.write(content)
 
         loop = asyncio.get_event_loop()
+        patient_gender = "male"
+        if current_user and current_user.gender:
+            patient_gender = current_user.gender.lower()
 
-        # Unified Clinical Pipeline (blocking → run in thread)
         logger.info(f"Starting OCR/Extraction for {file.filename}...")
-        ocr_result = await loop.run_in_executor(_pool, extract_text_from_file, file_path)
+        ocr_result = await loop.run_in_executor(
+            _pool, lambda: extract_text_from_file(file_path, patient_gender)
+        )
         logger.info(f"OCR/Extraction complete for {file.filename}. Status: {'error' if 'error' in ocr_result else 'success'}")
         
         if "error" in ocr_result:
@@ -51,18 +55,12 @@ async def upload_report(
 
         logger.info(f"Clinical Engine done. Risk={ocr_result.get('risk_level')}")
 
-        # LLM explanation based on structured data (blocking → run in thread)
-        logger.info(f"Starting LLM explanation (EN) for {file.filename}...")
+        logger.info(f"Starting report explanation for {file.filename}...")
         explanation_en = await loop.run_in_executor(
             _pool, explain_report, ocr_result["report"], "en"
         )
-        logger.info(f"LLM explanation (EN) complete for {file.filename}")
-
-        logger.info(f"Starting LLM explanation (HI) for {file.filename}...")
-        explanation_hi = await loop.run_in_executor(
-            _pool, explain_report, ocr_result["report"], "hi"
-        )
-        logger.info(f"LLM explanation (HI) complete for {file.filename}")
+        explanation_hi = explanation_en
+        logger.info(f"Report explanation complete for {file.filename}")
 
         # Save to database
         db = SessionLocal()

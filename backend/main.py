@@ -29,7 +29,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
-    description="AI-powered offline health assistant for rural India",
+    description="Offline health assistant for rural India",
     lifespan=lifespan
 )
 

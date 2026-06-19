@@ -331,11 +331,18 @@ GUIDELINES = {
         "name": "Creatinine",
         "unit": "mg/dL",
         "guideline": "Clinical Recommendation",
-        "thresholds": [
-            {"min": 0.67, "max": 1.17, "status": "Normal", "severity": 0, "ref": "0.67–1.17 mg/dL"},
-            {"max": 0.67, "status": "Low", "severity": 1, "ref": "<0.67 mg/dL"},
-            {"min": 1.17, "status": "High", "severity": 2, "ref": ">1.17 mg/dL"}
-        ]
+        "thresholds": {
+            "male": [
+                {"min": 0.74, "max": 1.35, "status": "Normal", "severity": 0, "ref": "0.74–1.35 mg/dL"},
+                {"max": 0.74, "status": "Low", "severity": 1, "ref": "<0.74 mg/dL"},
+                {"min": 1.35, "status": "High", "severity": 2, "ref": ">1.35 mg/dL"},
+            ],
+            "female": [
+                {"min": 0.59, "max": 1.04, "status": "Normal", "severity": 0, "ref": "0.59–1.04 mg/dL"},
+                {"max": 0.59, "status": "Low", "severity": 1, "ref": "<0.59 mg/dL"},
+                {"min": 1.04, "status": "High", "severity": 2, "ref": ">1.04 mg/dL"},
+            ],
+        }
     },
     "TOTAL_PROTEIN": {
         "name": "Total Protein",
@@ -404,12 +411,16 @@ def classify_parameter(param_key: str, value: float, gender: str = "male") -> Di
     if param_key not in GUIDELINES:
         return {"status": "Unknown Parameter", "severity": 0, "ref": "N/A", "guideline": "N/A"}
     
+    g = (gender or "male").lower()
+    if g not in ("male", "female"):
+        g = "male"
+    
     config = GUIDELINES[param_key]
     thresholds = config["thresholds"]
     
     # Handle gender-specific thresholds
     if isinstance(thresholds, dict):
-        thresholds = thresholds.get(gender.lower(), thresholds.get("male"))
+        thresholds = thresholds.get(g, thresholds.get("male"))
         
     for t in thresholds:
         match = True
@@ -432,17 +443,22 @@ def classify_parameter(param_key: str, value: float, gender: str = "male") -> Di
 # RISK SCORING ENGINE
 # ===========================================================
 
-def calculate_cv_risk(params: List[MedicalParameter]) -> Dict[str, Any]:
+def calculate_cv_risk(params: List[MedicalParameter], gender: str = "male") -> Dict[str, Any]:
     """
     Calculate Cardiovascular Risk Score from available lab markers.
     Scores proportionally based on how many markers were extracted (partial vitals OK).
     """
+    g = (gender or "male").lower()
+    if g not in ("male", "female"):
+        g = "male"
+    hdl_cutoff = 50 if g == "female" else 40
+
     marker_rules = {
         "LDL Cholesterol": [
             (160, 30), (130, 15),
         ],
         "HDL Cholesterol": [
-            (40, 20, "below"),
+            (hdl_cutoff, 20, "below"),
         ],
         "Triglycerides": [
             (200, 15), (150, 5),
@@ -670,7 +686,10 @@ def process_clinical_results(parsed_data: List[Dict[str, Any]], patient_context:
         processed_params.append(p)
 
     # Risk Scoring
-    report.risk_scores["cardiovascular"] = calculate_cv_risk(processed_params)
+    g = (gender or "male").lower()
+    if g not in ("male", "female"):
+        g = "male"
+    report.risk_scores["cardiovascular"] = calculate_cv_risk(processed_params, g)
     
     # Multimarker Escalation
     if len([p for p in report.red_flags if "Cholesterol" in p.parameter or "LDL" in p.parameter]) >= 2:
