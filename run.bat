@@ -8,7 +8,10 @@ set "ROOT_DIR=%~dp0"
 if "%ROOT_DIR:~-1%"=="\" set "ROOT_DIR=%ROOT_DIR:~0,-1%"
 set "BACKEND_DIR=%ROOT_DIR%\backend"
 set "FRONTEND_DIR=%ROOT_DIR%\frontend"
-set "VENV_PYTHON=%ROOT_DIR%\venv\Scripts\python.exe"
+set "LOCAL_DIR=%ROOT_DIR%\.local"
+set "VENV_PYTHON=%LOCAL_DIR%\python\tools\python.exe"
+set "NPM_CMD=%LOCAL_DIR%\node\node-v20.14.0-win-x64\npm.cmd"
+set "PATH=%LOCAL_DIR%\node\node-v20.14.0-win-x64;%PATH%"
 set "MODELS_DIR=%BACKEND_DIR%\models"
 set "HEALTHMITRA_REQUIRE_REAL_MODELS=1"
 
@@ -22,7 +25,7 @@ if "%FORCE_SETUP%"=="1" (
     if errorlevel 1 exit /b 1
 )
 
-if not exist "venv\.setup_finished" (
+if not exist "%LOCAL_DIR%\.setup_finished" (
     echo =======================================================
     echo   HealthMitra Scan - Initial Setup Required
     echo =======================================================
@@ -67,9 +70,9 @@ if exist "backend\.env" (
 )
 
 echo [3/3] Launching backend and frontend...
-start "HealthMitra Backend" /D "%BACKEND_DIR%" cmd /k "title HealthMitra Backend && ..\venv\Scripts\python.exe main.py"
+start "HealthMitra Backend" /D "%BACKEND_DIR%" cmd /k "title HealthMitra Backend && "%VENV_PYTHON%" main.py"
 timeout /t 1 /nobreak >nul
-start "HealthMitra Frontend" /D "%FRONTEND_DIR%" cmd /k "title HealthMitra Frontend && npm.cmd run dev"
+start "HealthMitra Frontend" /D "%FRONTEND_DIR%" cmd /k "title HealthMitra Frontend && "%NPM_CMD%" run dev"
 
 echo.
 echo =======================================================

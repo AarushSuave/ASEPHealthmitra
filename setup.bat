@@ -22,88 +22,62 @@ set "FRONTEND_DIR=%ROOT_DIR%\frontend"
 set "MODELS_DIR=%BACKEND_DIR%\models"
 set "HEALTHMITRA_REQUIRE_REAL_MODELS=1"
 
-set "PYTHON_EXE=%ROOT_DIR%\venv\Scripts\python.exe"
-set "EXISTING_VENV_OK=0"
-if exist "%PYTHON_EXE%" (
-    "%PYTHON_EXE%" -c "import sys; assert sys.version_info[:2] in [(3,10),(3,11),(3,12),(3,13)]" >nul 2>&1
-    if not errorlevel 1 (
-        set "EXISTING_VENV_OK=1"
-        echo [OK] Reusing local Python venv.
-    )
-)
+set "LOCAL_DIR=%ROOT_DIR%\.local"
+if not exist "%LOCAL_DIR%" mkdir "%LOCAL_DIR%"
 
-rem Prefer Python versions with reliable ML wheels on Windows when a venv must be created.
-set "PY_CMD="
-if "%EXISTING_VENV_OK%"=="0" (
-for %%V in (3.13 3.12 3.11 3.10) do (
-        if not defined PY_CMD (
-            py -%%V -c "import sys" >nul 2>&1
-            if not errorlevel 1 set "PY_CMD=py -%%V"
-        )
-    )
-    if not defined PY_CMD (
-        python --version >nul 2>&1
-        if not errorlevel 1 (
-            for /f %%I in ('python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"') do set "PY_VER=%%I"
-            for %%V in (3.10 3.11 3.12 3.13) do (
-                if "!PY_VER!"=="%%V" set "PY_CMD=python"
-            )
-        )
-    )
-    if not defined PY_CMD (
-        echo [ERROR] Supported Python not found. Install Python 3.10, 3.11, 3.12, or 3.13.
-        goto fail
-    )
-    for /f %%I in ('!PY_CMD! -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"') do set "PY_VER=%%I"
-    echo [OK] Using Python !PY_VER! via "!PY_CMD!".
-)
+set "PYTHON_DIR=%LOCAL_DIR%\python"
+set "PYTHON_EXE=%PYTHON_DIR%\tools\python.exe"
 
-node --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Node.js not found. Install Node.js 18+.
-    goto fail
+if not exist "%PYTHON_EXE%" (
+    echo [SETUP] Downloading portable Python 3.11...
+    powershell -Command "$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://www.nuget.org/api/v2/package/python/3.11.9' -OutFile '%LOCAL_DIR%\python.zip'"
+    if errorlevel 1 goto fail
+    echo [SETUP] Extracting portable Python...
+    powershell -Command "Expand-Archive -Path '%LOCAL_DIR%\python.zip' -DestinationPath '%PYTHON_DIR%' -Force"
+    if errorlevel 1 goto fail
+    del /q "%LOCAL_DIR%\python.zip" >nul 2>&1
 )
-echo [OK] Node.js is installed.
+echo [OK] Using portable Python via "%PYTHON_EXE%".
+
+set "NODE_DIR=%LOCAL_DIR%\node"
+set "NODE_EXE=%NODE_DIR%\node-v20.14.0-win-x64\node.exe"
+set "NPM_CMD=%NODE_DIR%\node-v20.14.0-win-x64\npm.cmd"
+
+if not exist "%NODE_EXE%" (
+    echo [SETUP] Downloading portable Node.js 20...
+    powershell -Command "$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.14.0/node-v20.14.0-win-x64.zip' -OutFile '%LOCAL_DIR%\node.zip'"
+    if errorlevel 1 goto fail
+    echo [SETUP] Extracting portable Node.js...
+    powershell -Command "Expand-Archive -Path '%LOCAL_DIR%\node.zip' -DestinationPath '%NODE_DIR%' -Force"
+    if errorlevel 1 goto fail
+    del /q "%LOCAL_DIR%\node.zip" >nul 2>&1
+)
+echo [OK] Using portable Node.js via "%NODE_EXE%".
+set "PATH=%NODE_DIR%\node-v20.14.0-win-x64;%PATH%"
 echo.
 
-echo [1/7] Preparing Python virtual environment...
-set "RECREATE_VENV=0"
-if exist "venv\Scripts\python.exe" (
-    "venv\Scripts\python.exe" -c "import sys; assert sys.version_info[:2] in [(3,10),(3,11),(3,12),(3,13)]" >nul 2>&1
-    if errorlevel 1 set "RECREATE_VENV=1"
-)
-if "!RECREATE_VENV!"=="1" (
-    echo [SETUP] Existing venv is incompatible; recreating it.
-    rmdir /s /q "venv"
-)
-if not exist "venv" (
-    !PY_CMD! -m venv venv
-    if errorlevel 1 (
-        echo [ERROR] Virtual environment creation failed.
-        goto fail
-    )
-)
+echo [1/7] Preparing Python environment...
 if not exist "%PYTHON_EXE%" (
-    echo [ERROR] Virtual environment Python was not created.
+    echo [ERROR] Portable Python was not found.
     goto fail
 )
-echo [OK] Virtual environment ready.
+echo [OK] Python environment ready.
 echo.
 
 echo [2/7] Syncing backend dependencies...
 set "NEED_PIP_INSTALL=0"
-if not exist "venv\.deps_installed" set "NEED_PIP_INSTALL=1"
-if exist "venv\.deps_installed" (
+if not exist "%PYTHON_DIR%\.deps_installed" set "NEED_PIP_INSTALL=1"
+if exist "%PYTHON_DIR%\.deps_installed" (
     for %%I in ("requirements.txt") do set "REQ_TIME=%%~tI"
-    for %%I in ("venv\.deps_installed") do set "VENV_TIME=%%~tI"
+    for %%I in ("%PYTHON_DIR%\.deps_installed") do set "VENV_TIME=%%~tI"
     if not "!REQ_TIME!"=="!VENV_TIME!" set "NEED_PIP_INSTALL=1"
 )
 if "!NEED_PIP_INSTALL!"=="1" (
-    "%PYTHON_EXE%" -m pip install --upgrade pip
+    "%PYTHON_EXE%" -m pip install --upgrade pip --no-cache-dir
     if errorlevel 1 goto pip_fail
-    "%PYTHON_EXE%" -m pip install -r requirements.txt
+    "%PYTHON_EXE%" -m pip install --no-cache-dir -r requirements.txt
     if errorlevel 1 goto pip_fail
-    copy /y "requirements.txt" "venv\.deps_installed" >nul
+    copy /y "requirements.txt" "%PYTHON_DIR%\.deps_installed" >nul
 ) else (
     echo [SKIP] Backend dependencies already up to date.
 )
@@ -125,7 +99,7 @@ if exist ".deps_installed" (
     if not "!PKG_TIME!"=="!NPM_TIME!" set "NEED_NPM_INSTALL=1"
 )
 if "!NEED_NPM_INSTALL!"=="1" (
-    call npm install
+    call "%NPM_CMD%" install --cache "%LOCAL_DIR%\npm-cache"
     if errorlevel 1 (
         popd
         echo [ERROR] npm install failed.
@@ -189,7 +163,7 @@ if errorlevel 1 (
 popd
 
 pushd "%FRONTEND_DIR%"
-call npm run build
+call "%NPM_CMD%" run build
 if errorlevel 1 (
     popd
     echo [ERROR] Frontend build failed.
@@ -199,7 +173,7 @@ popd
 echo [OK] Verification complete.
 echo.
 
-echo Setup successfully completed on %DATE% %TIME% > "venv\.setup_finished"
+echo Setup successfully completed on %DATE% %TIME% > "%LOCAL_DIR%\.setup_finished"
 echo ============================================
 echo   Setup Complete
 echo ============================================
@@ -216,7 +190,7 @@ echo [ERROR] Model download failed. Check internet access and retry setup.bat.
 goto fail
 
 :fail
-if exist "venv\.setup_finished" del /q "venv\.setup_finished" >nul 2>&1
+if exist "%LOCAL_DIR%\.setup_finished" del /q "%LOCAL_DIR%\.setup_finished" >nul 2>&1
 echo.
 echo [FAILED] Setup did not complete. Fix the error above and rerun setup.bat.
 if "%NO_PAUSE%"=="0" pause
