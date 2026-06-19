@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { useLanguage } from './LanguageContext'
 import {
-    LayoutDashboard, FileText, Activity, UserCircle, CircleHelp, Moon, Sun, Calendar, History
+    LayoutDashboard, FileText, Activity, UserCircle, CircleHelp, Moon, Sun, Calendar, History, Languages
 } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import ReportExplainer from './pages/ReportExplainer'
@@ -56,6 +57,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
     const location = useLocation()
     const { user, logout } = useAuth()
+    const { lang, toggleHindi, t } = useLanguage()
     const [theme, setTheme] = useState(() => {
         const savedTheme = localStorage.getItem('theme_mode')
         return savedTheme === 'light' ? 'light' : 'dark'
@@ -172,6 +174,14 @@ export default function App() {
             <header className="header">
                 <h2 className="header-title">{currentTitle}</h2>
                 <div className="header-right">
+                    <button
+                        className={`header-chip hindi-mode-btn ${lang === 'hi' ? 'active' : ''}`}
+                        onClick={toggleHindi}
+                        title={t('Switch to Hindi', 'हिंदी मोड')}
+                    >
+                        <Languages size={14} />
+                        {lang === 'hi' ? 'English' : 'हिंदी'}
+                    </button>
                     <button
                         className="header-chip theme-toggle-btn"
                         onClick={toggleTheme}

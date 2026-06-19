@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../AuthContext'
+import { useAuth, checkBackendHealth } from '../AuthContext'
 import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
@@ -11,8 +11,15 @@ export default function Login() {
     const [loginRole, setLoginRole] = useState('user') // user | asha
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [backendOk, setBackendOk] = useState(null)
     const { login } = useAuth()
     const navigate = useNavigate()
+
+    useEffect(() => {
+        checkBackendHealth().then(setBackendOk)
+        const id = setInterval(() => checkBackendHealth().then(setBackendOk), 8000)
+        return () => clearInterval(id)
+    }, [])
 
     useEffect(() => {
         if (rememberMe) {
@@ -57,6 +64,12 @@ export default function Login() {
 
                 <h2 className="auth-title">Welcome Back</h2>
                 <p className="auth-subtitle">Sign in to access your health dashboard</p>
+
+                {backendOk === false && (
+                    <div className="auth-error" style={{ background: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.4)', color: '#fbbf24' }}>
+                        Backend offline — run <strong>run.bat</strong> from the project folder, then refresh.
+                    </div>
+                )}
 
                 {error && <div className="auth-error">{error}</div>}
 

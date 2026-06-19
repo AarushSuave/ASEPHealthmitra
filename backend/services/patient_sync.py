@@ -23,8 +23,7 @@ def ensure_patient_for_user(db: Session, user: User) -> Patient:
         patient.gender = user.gender
         patient.blood_group = user.blood_group
         patient.phone = user.phone
-        if user.village:
-            patient.village = user.village
+        patient.village = user.village or None
     db.commit()
     db.refresh(patient)
     return patient

@@ -90,6 +90,7 @@ class MedicalReport(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     patient_id = Column(Integer, nullable=True)
     filename = Column(String(255))
+    lab_name = Column(String(200), nullable=True)   # Detected laboratory name
     ocr_text = Column(Text)
     explanation_en = Column(Text)
     explanation_hi = Column(Text)

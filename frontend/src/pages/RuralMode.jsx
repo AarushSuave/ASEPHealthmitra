@@ -291,7 +291,7 @@ export default function RuralMode() {
                     )}
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <select className="form-select" value={selectedVillage} onChange={(event) => setSelectedVillage(event.target.value)}>
-                            {villageOptions.map((village) => <option key={village}>{village}</option>)}
+                            {villageOptions.map((village) => <option key={village} value={village}>{village}</option>)}
                         </select>
                         <select className="form-select" value={riskFilter} onChange={(event) => setRiskFilter(event.target.value)}>
                             <option value="all">All Risk</option>
@@ -325,14 +325,14 @@ export default function RuralMode() {
                         <input className="form-input" placeholder="Full name" value={newPatient.name} onChange={(event) => updateNewPatient('name', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                         <input className="form-input" type="number" placeholder="Age" value={newPatient.age} onChange={(event) => updateNewPatient('age', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                         <select className="form-select" value={newPatient.gender} onChange={(event) => updateNewPatient('gender', event.target.value)}>
-                            <option>Female</option>
-                            <option>Male</option>
-                            <option>Other</option>
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
+                            <option value="Other">Other</option>
                         </select>
                         <input className="form-input" placeholder="Blood group" value={newPatient.blood_group} onChange={(event) => updateNewPatient('blood_group', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                         <select className="form-select" value={newPatient.village} onChange={(event) => updateNewPatient('village', event.target.value)}>
-                            <option value="">Village</option>
-                            {Object.keys(mergedVillages).map((village) => <option key={village}>{village}</option>)}
+                            <option value="">Select village / गाँव चुनें</option>
+                            {Object.keys(mergedVillages).map((village) => <option key={village} value={village}>{village}</option>)}
                         </select>
                         <input className="form-input" placeholder="Phone" value={newPatient.phone} onChange={(event) => updateNewPatient('phone', event.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') addPatient() }} />
                     </div>

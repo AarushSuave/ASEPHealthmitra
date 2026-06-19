@@ -123,27 +123,56 @@ echo.
 echo [5/7] X-ray AI models removed.
 echo.
 
-echo [6/7] Checking optional local tools...
+echo [6/7] Checking Tesseract OCR (one-time install)...
+set "TESSERACT_SENTINEL=%LOCAL_DIR%\.tesseract_installed"
+set "TESSERACT_EXE=C:\Program Files\Tesseract-OCR\tesseract.exe"
+
 where tesseract >nul 2>&1
 if errorlevel 1 (
-    echo [INFO] Tesseract OCR not found. Report Scanner needs it for scanned images.
-    echo [INFO] Install command ^(downloads on this device only, not stored in the repo^):
-    echo   winget install --id UB-Mannheim.TesseractOCR -e --accept-package-agreements --accept-source-agreements
-    where winget >nul 2>&1
-    if not errorlevel 1 (
-        echo [SETUP] Running winget Tesseract install...
-        winget install --id UB-Mannheim.TesseractOCR -e --accept-package-agreements --accept-source-agreements
-        if errorlevel 1 (
-            echo [WARN] winget install failed. Run the command above manually as Administrator.
+    if not exist "%TESSERACT_EXE%" (
+        echo [INFO] Tesseract OCR not found. Installing once for Report Scanner...
+        where winget >nul 2>&1
+        if not errorlevel 1 (
+            winget install --id UB-Mannheim.TesseractOCR -e --accept-package-agreements --accept-source-agreements
         ) else (
-            echo [OK] Tesseract install finished. Restart the terminal if OCR still fails.
+            echo [WARN] winget not available. Install Tesseract manually from UB-Mannheim.TesseractOCR
         )
-    ) else (
-        echo [WARN] winget not available. Install Tesseract manually or add tesseract.exe to PATH.
     )
-) else (
-    echo [OK] Tesseract OCR found.
 )
+
+if exist "%TESSERACT_EXE%" (
+    echo TESSERACT_CMD=%TESSERACT_EXE%> "%BACKEND_DIR%\.env.tesseract"
+    echo [OK] Tesseract found at %TESSERACT_EXE%
+    echo. > "%TESSERACT_SENTINEL%"
+) else (
+    where tesseract >nul 2>&1
+    if not errorlevel 1 (
+        for /f "delims=" %%T in ('where tesseract 2^>nul') do set "TESSERACT_EXE=%%T"
+        echo TESSERACT_CMD=!TESSERACT_EXE!>> "%BACKEND_DIR%\.env"
+        echo [OK] Tesseract found on PATH: !TESSERACT_EXE!
+        echo. > "%TESSERACT_SENTINEL%"
+    ) else (
+        echo [WARN] Tesseract still not found. Report Scanner OCR will fail until installed.
+    )
+)
+
+if not exist "%BACKEND_DIR%\.env" (
+    echo # HealthMitra backend environment> "%BACKEND_DIR%\.env"
+)
+findstr /C:"TESSERACT_CMD" "%BACKEND_DIR%\.env" >nul 2>&1
+if errorlevel 1 (
+    if exist "%TESSERACT_EXE%" echo TESSERACT_CMD=%TESSERACT_EXE%>> "%BACKEND_DIR%\.env"
+)
+
+"%PYTHON_EXE%" -c "import os; os.chdir(r'%BACKEND_DIR%'); import pytesseract; from config import TESSERACT_CMD; pytesseract.pytesseract.tesseract_cmd=TESSERACT_CMD if os.path.exists(TESSERACT_CMD) else 'tesseract'; print('Tesseract version:', pytesseract.get_tesseract_version())" 2>nul
+if errorlevel 1 (
+    echo [WARN] pytesseract could not reach Tesseract. Restart terminal after install.
+) else (
+    echo [OK] pytesseract + Tesseract verified.
+)
+echo.
+
+echo [6b/7] Checking optional local tools...
 where ffmpeg >nul 2>&1
 if errorlevel 1 (
     echo [WARN] ffmpeg not found in PATH. Voice features may be limited.

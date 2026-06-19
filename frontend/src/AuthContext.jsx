@@ -3,17 +3,47 @@ import { clearHealthSync } from './utils/healthSync'
 
 const AuthContext = createContext(null)
 
+const BACKEND_DOWN_MSG = 'Backend is not responding. Double-click run.bat in the project folder, wait for both server windows to open, then refresh this page.'
+
 async function readApiResponse(res, fallbackMessage) {
     const text = await res.text()
     if (!text) {
-        if (!res.ok) throw new Error(fallbackMessage)
+        if (!res.ok) {
+            if (res.status === 401) throw new Error('Invalid email or password')
+            if (res.status === 404) throw new Error('API endpoint not found. Restart run.bat and try again.')
+            if (res.status >= 502) throw new Error(fallbackMessage)
+            throw new Error(`Request failed (${res.status})`)
+        }
         return {}
     }
 
     try {
         return JSON.parse(text)
     } catch {
+        if (!res.ok) throw new Error(fallbackMessage)
+        throw new Error('Unexpected server response')
+    }
+}
+
+async function apiFetch(url, options = {}, fallbackMessage = BACKEND_DOWN_MSG) {
+    let res
+    try {
+        res = await fetch(url, options)
+    } catch {
         throw new Error(fallbackMessage)
+    }
+    const data = await readApiResponse(res, fallbackMessage)
+    return { res, data }
+}
+
+export async function checkBackendHealth() {
+    try {
+        const res = await fetch('/api/health', { cache: 'no-store' })
+        if (!res.ok) return false
+        const data = await res.json()
+        return data?.status === 'ok'
+    } catch {
+        return false
     }
 }
 
@@ -33,11 +63,10 @@ export function AuthProvider({ children }) {
 
     const fetchProfile = async () => {
         try {
-            const res = await fetch('/api/auth/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
+            const { res, data } = await apiFetch('/api/auth/me', {
+                headers: { Authorization: `Bearer ${token}` },
+            }, 'Could not read profile. Please restart the backend (run.bat).')
             if (res.ok) {
-                const data = await readApiResponse(res, 'Could not read profile. Please restart the backend.')
                 setUser(data)
                 previousUserId.current = data.id ?? null
             } else {
@@ -57,13 +86,11 @@ export function AuthProvider({ children }) {
         let endpoint = '/api/auth/login'
         if (mode === 'asha') endpoint = '/api/auth/asha-login'
 
-        const res = await fetch(endpoint, { method: 'POST', body: formData })
+        const { res, data } = await apiFetch(endpoint, { method: 'POST', body: formData })
 
         if (mode === 'asha' && res.status === 404) {
-            throw new Error('Special login endpoint not found. Restart backend (run.bat) and try again.')
+            throw new Error('ASHA login endpoint not found. Restart backend (run.bat) and try again.')
         }
-
-        const data = await readApiResponse(res, 'Backend is not responding. Start run.bat and try again.')
 
         if (!res.ok) throw new Error(data.detail || 'Login failed')
 
@@ -84,9 +111,7 @@ export function AuthProvider({ children }) {
             if (v) formData.append(k, v)
         })
 
-        const res = await fetch('/api/auth/register', { method: 'POST', body: formData })
-        const data = await readApiResponse(res, 'Backend is not responding. Start run.bat and try again.')
-
+        const { res, data } = await apiFetch('/api/auth/register', { method: 'POST', body: formData })
         if (!res.ok) throw new Error(data.detail || 'Registration failed')
 
         localStorage.removeItem('hm_health_sync')
@@ -112,12 +137,11 @@ export function AuthProvider({ children }) {
         Object.entries(fields).forEach(([k, v]) => {
             if (v !== undefined && v !== null) formData.append(k, v)
         })
-        const res = await fetch('/api/auth/profile', {
+        const { res, data } = await apiFetch('/api/auth/profile', {
             method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
         })
-        const data = await readApiResponse(res, 'Backend is not responding. Start run.bat and try again.')
         if (res.ok) setUser(data.user)
         return data
     }
@@ -125,12 +149,11 @@ export function AuthProvider({ children }) {
     const uploadPhoto = async (file) => {
         const formData = new FormData()
         formData.append('file', file)
-        const res = await fetch('/api/auth/upload-photo', {
+        const { res, data } = await apiFetch('/api/auth/upload-photo', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
         })
-        const data = await readApiResponse(res, 'Backend is not responding. Start run.bat and try again.')
         if (res.ok) {
             setUser(prev => ({ ...prev, profile_photo: data.profile_photo }))
         }

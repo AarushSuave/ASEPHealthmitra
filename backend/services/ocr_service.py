@@ -162,7 +162,7 @@ MEDICAL_PATTERNS = {
         "unit": "mg/dL"
     },
     "Direct Bilirubin": {
-        "pattern": r"(?:direct\s*bilirubin|conjugated\s*bilirubin)[^0-9]*?\s*(?<![a-z])(\d+\.?\d*)\b",
+        "pattern": r"(?<!in)(?<!un)(?:direct\s*bilirubin|conjugated\s*bilirubin)[^0-9]*?\s*(?<![a-z])(\d+\.?\d*)\b",
         "normal_range": (0.0, 0.3),
         "unit": "mg/dL"
     },
@@ -325,70 +325,56 @@ def _extract_structured_from_pdf(file_path: str) -> List[Dict[str, Any]]:
         logger.error(f"Structured PDF extraction error: {e}")
         return []
 
-def _get_simulated_text(file_path: str) -> str:
-    """Helper to locate and read simulated text for fallback/demo."""
-    # Priority 1: Match the filename exactly with .txt extension in same directory
-    base_name, _ = os.path.splitext(file_path)
-    paths_to_check = [base_name + ".txt"]
-    
-    # Priority 2: Look for 'sample_medical_report.txt' in the same directory
-    dir_name = os.path.dirname(file_path)
-    paths_to_check.append(os.path.join(dir_name, "sample_medical_report.txt"))
-    
-    # Priority 3: Look in backend/uploads/sample_medical_report.txt
-    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    paths_to_check.append(os.path.join(backend_dir, "uploads", "sample_medical_report.txt"))
-    
-    # Priority 4: Look in workspace test/sample_medical_report.txt
-    workspace_dir = os.path.dirname(backend_dir)
-    paths_to_check.append(os.path.join(workspace_dir, "test", "sample_medical_report.txt"))
-    
-    for path in paths_to_check:
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                    logger.info(f"Using simulated OCR text fallback from: {path}")
-                    return f.read().strip()
-            except Exception as e:
-                logger.error(f"Error reading simulated text at {path}: {e}")
-    return ""
+def _tesseract_ready() -> bool:
+    """Return True when Tesseract binary is configured and reachable."""
+    if not TESSERACT_AVAILABLE:
+        return False
+    try:
+        from config import TESSERACT_CMD
+        if TESSERACT_CMD and os.path.exists(TESSERACT_CMD):
+            pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
+        pytesseract.get_tesseract_version()
+        return True
+    except Exception as exc:
+        logger.error(f"Tesseract not available: {exc}")
+        return False
+
+
+def _run_tesseract(image) -> str:
+    """Run Tesseract OCR on a PIL image."""
+    try:
+        return pytesseract.image_to_string(image, lang="eng+hin").strip()
+    except Exception:
+        return pytesseract.image_to_string(image, lang="eng").strip()
 
 
 def _ocr_from_image(file_path: str) -> str:
-    """Extract text from an image file using Tesseract (with simulated fallback)."""
-    try:
-        if not TESSERACT_AVAILABLE:
-            raise ImportError("pytesseract or Pillow is not installed.")
-        image = Image.open(file_path)
-        # Use English + Hindi language data if available
-        try:
-            text = pytesseract.image_to_string(image, lang="eng+hin")
-        except Exception:
-            text = pytesseract.image_to_string(image, lang="eng")
-        return text.strip()
-    except Exception as e:
-        logger.error(f"OCR image extraction error: {e}")
-        return _get_simulated_text(file_path)
+    """Extract text from an image file using Tesseract OCR only."""
+    if not _tesseract_ready():
+        raise RuntimeError(
+            "Tesseract OCR is not installed. Run setup.bat once to install it, then restart."
+        )
+    image = Image.open(file_path)
+    text = _run_tesseract(image)
+    if not text.strip():
+        raise RuntimeError("OCR returned no text. Upload a clearer image or PDF.")
+    return text
 
 
 def _ocr_from_pdf(file_path: str) -> str:
-    """Extract text from a PDF file by converting pages to images first (with simulated fallback)."""
-    if not PDF_SUPPORT or not TESSERACT_AVAILABLE:
-        logger.warning("pdf2image or pytesseract not available for PDF OCR")
-        return _get_simulated_text(file_path)
-    try:
-        images = convert_from_path(file_path)
-        all_text = []
-        for page_img in images:
-            try:
-                text = pytesseract.image_to_string(page_img, lang="eng+hin")
-            except Exception:
-                text = pytesseract.image_to_string(page_img, lang="eng")
-            all_text.append(text.strip())
-        return "\n\n".join(all_text)
-    except Exception as e:
-        logger.error(f"OCR PDF extraction error: {e}")
-        return _get_simulated_text(file_path)
+    """Extract text from a PDF by converting pages to images and running Tesseract."""
+    if not _tesseract_ready():
+        raise RuntimeError(
+            "Tesseract OCR is not installed. Run setup.bat once to install it, then restart."
+        )
+    if not PDF_SUPPORT:
+        raise RuntimeError("pdf2image is not installed. Re-run setup.bat.")
+    images = convert_from_path(file_path)
+    all_text = [_run_tesseract(page_img) for page_img in images]
+    text = "\n\n".join(t for t in all_text if t)
+    if not text.strip():
+        raise RuntimeError("OCR returned no text from PDF. Upload a clearer scan.")
+    return text
 
 
 
@@ -461,10 +447,19 @@ def extract_text_from_file(file_path: str) -> dict:
 
     # 2. Try OCR (Final Fallback for images or non-text PDFs)
     if not structured_findings:
-        if ext == ".pdf":
-            raw_text = _ocr_from_pdf(file_path)
-        elif ext in (".png", ".jpg", ".jpeg"):
-            raw_text = _ocr_from_image(file_path)
+        try:
+            if ext == ".pdf":
+                raw_text = _ocr_from_pdf(file_path)
+            elif ext in (".png", ".jpg", ".jpeg"):
+                raw_text = _ocr_from_image(file_path)
+        except RuntimeError as exc:
+            return {"error": str(exc), "status": "fail"}
+        except Exception as exc:
+            logger.error(f"OCR pipeline failed: {exc}")
+            return {
+                "error": "OCR failed. Ensure Tesseract is installed (run setup.bat) and upload a clearer scan.",
+                "status": "fail",
+            }
         
         # Parse medical values from raw text if structured extraction didn't find anything
         if raw_text:

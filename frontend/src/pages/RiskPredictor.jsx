@@ -28,9 +28,22 @@ export default function RiskPredictor() {
             return
         }
         const sync = getHealthSync(user.id)
-        if (sync.vitals) {
-            setVitals(prev => ({ ...prev, ...sync.vitals }))
+        const genderNorm = (user.gender || 'male').toLowerCase()
+        let bmi = sync.vitals?.bmi || 0
+        const height = sync.vitals?.height || user.height_cm || 0
+        const weight = sync.vitals?.weight || user.weight_kg || 0
+        if (height > 0 && weight > 0) {
+            bmi = parseFloat((weight / ((height / 100) ** 2)).toFixed(1))
         }
+        setVitals(prev => ({
+            ...prev,
+            ...sync.vitals,
+            age: sync.vitals?.age || user.age || 0,
+            gender: genderNorm,
+            height,
+            weight,
+            bmi,
+        }))
         if (sync.risk) {
             setResult({
                 diabetes_risk: sync.risk.diabetes_risk,
@@ -42,7 +55,7 @@ export default function RiskPredictor() {
                 emergency: { is_emergency: false, alerts: [] },
             })
         }
-    }, [user?.id])
+    }, [user?.id, user?.age, user?.gender, user?.height_cm, user?.weight_kg, user?.blood_group])
 
     const handleChange = (field, value) => {
         setVitals(prev => {
@@ -119,10 +132,19 @@ export default function RiskPredictor() {
     const getRiskColor = (score) => score >= 60 ? '#ef4444' : score >= 30 ? '#f59e0b' : '#10b981'
     const circumference = 2 * Math.PI * 65
 
+    const bmiCategory = (bmi) => {
+        if (!bmi || bmi <= 0) return ''
+        if (bmi < 18.5) return 'Underweight (<18.5)'
+        if (bmi <= 24.9) return 'Normal (18.5–24.9)'
+        if (bmi < 30) return 'Overweight (25–29.9)'
+        return 'Obese (≥30)'
+    }
+
     const lifestyleScore = () => {
         let s = 100
         if (vitals.smoking) s -= 20
         if (vitals.exercise_minutes_weekly < 90) s -= 15
+        if (vitals.bmi > 0 && vitals.bmi < 18.5) s -= 8
         if (vitals.bmi > 25) s -= 10
         if (vitals.bmi > 30) s -= 10
         return Math.max(s, 20)
@@ -172,7 +194,7 @@ export default function RiskPredictor() {
                             </div>
                         </div>
                         <div className="form-group">
-                            <label className="form-label">BMI (auto)</label>
+                            <label className="form-label">BMI (auto) {vitals.bmi > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>– {bmiCategory(vitals.bmi)}</span>}</label>
                             <input type="number" step="0.1" className="form-input" value={vitals.bmi || ''} readOnly style={{ background: 'rgba(255,255,255,0.05)', cursor: 'not-allowed' }} />
                         </div>
                         <div className="grid-2" style={{ gap: 12 }}>
@@ -270,7 +292,12 @@ export default function RiskPredictor() {
                                         <span style={{ fontWeight: 600, fontSize: 14 }}>Target Ranges</span>
                                     </div>
                                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                                        BP &lt; 120/80 · Sugar &lt; 100 · Chol &lt; 200
+                                        BMI 18.5–24.9 · BP &lt; 120/80 · Sugar &lt; 100 · Chol &lt; 200
+                                        {result.vitals_provided != null && (
+                                            <div style={{ marginTop: 6, color: 'var(--text-muted)' }}>
+                                                Based on {result.vitals_provided} vital(s) entered
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

@@ -58,6 +58,11 @@ app.include_router(ourhealth.router)
 app.include_router(family.router)
 
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "name": APP_NAME, "version": APP_VERSION}
+
+
 @app.get("/")
 def root():
     return {

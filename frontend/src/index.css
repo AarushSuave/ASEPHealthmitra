@@ -747,12 +747,48 @@ select {
 .form-select {
   width: 100%;
   padding: 10px 14px;
+  padding-right: 36px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 14px;
   transition: all var(--transition-fast);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  color-scheme: dark;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.form-input {
+  padding-right: 14px;
+  background-image: none;
+  cursor: text;
+}
+
+.form-select option,
+.form-select optgroup {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.form-select option:checked,
+.form-select option:hover {
+  background: #334155;
+  color: #fff;
+}
+
+.form-select:invalid,
+.form-select option[value=""] {
+  color: var(--text-muted);
+}
+
+.form-select:not(:invalid):not([value=""]) {
+  color: var(--text-primary);
 }
 
 .form-input:focus,
@@ -1481,10 +1517,17 @@ select {
 .auth-field select {
   padding-left: 14px;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 
 .auth-field select option {
-  background: #1f2937;
+  background: #1e293b;
+  color: #f1f5f9;
 }
 
 .auth-field input::placeholder {
@@ -2113,4 +2156,58 @@ select {
   .ai-send-btn {
     width: 100%;
   }
+}
+
+/* Visit tracker urgency glow */
+.visit-tracker-card {
+  position: relative;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.visit-tracker-card.urgency-critical {
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.35), 0 0 48px rgba(239, 68, 68, 0.15);
+  animation: urgency-pulse-critical 2s ease-in-out infinite;
+}
+
+.visit-tracker-card.urgency-warning {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+  animation: urgency-pulse-warning 3s ease-in-out infinite;
+}
+
+.visit-tracker-card.urgency-normal {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.12);
+}
+
+@keyframes urgency-pulse-critical {
+  0%, 100% { box-shadow: 0 0 24px rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 0 36px rgba(239, 68, 68, 0.55); }
+}
+
+@keyframes urgency-pulse-warning {
+  0%, 100% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 0 28px rgba(245, 158, 11, 0.35); }
+}
+
+.hindi-mode-btn.active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.report-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  margin-bottom: 8px;
+}
+
+.report-history-item:hover {
+  background: rgba(255, 255, 255, 0.03);
 }

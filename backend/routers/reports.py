@@ -9,7 +9,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
 from models import MedicalReport, HealthTimeline
-from routers.auth import get_optional_user
+from routers.auth import get_optional_user, get_current_user
 from services.patient_sync import ensure_patient_for_user
 from services.ocr_service import extract_text_from_file
 from services.llm_service import explain_report
@@ -151,6 +151,38 @@ def get_report_history(
         "risk_level": r.risk_level,
         "created_at": r.created_at.isoformat() if r.created_at else None
     } for r in reports]
+
+
+@router.delete("/{report_id}")
+def delete_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Delete a report owned by the current user (file + DB + timeline refs)."""
+    report = db.query(MedicalReport).filter(
+        MedicalReport.id == report_id,
+        MedicalReport.user_id == current_user.id,
+    ).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    file_path = os.path.join(UPLOAD_DIR, report.filename)
+    if os.path.isfile(file_path):
+        try:
+            os.remove(file_path)
+        except OSError as exc:
+            logger.warning(f"Could not delete upload file {file_path}: {exc}")
+
+    db.query(HealthTimeline).filter(
+        HealthTimeline.user_id == current_user.id,
+        HealthTimeline.event_type == "report",
+        HealthTimeline.data_json.contains(f'"report_id": {report_id}'),
+    ).delete(synchronize_session=False)
+
+    db.delete(report)
+    db.commit()
+    return {"message": "Report deleted", "id": report_id}
 
 
 @router.get("/{report_id}")

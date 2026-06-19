@@ -33,6 +33,10 @@ def predict_risk(
             current_user.height_cm = float(vitals_dict["height"])
         if vitals_dict.get("weight"):
             current_user.weight_kg = float(vitals_dict["weight"])
+        if vitals_dict.get("age"):
+            current_user.age = int(vitals_dict["age"])
+        if vitals_dict.get("gender"):
+            current_user.gender = vitals_dict["gender"].capitalize()
         patient = ensure_patient_for_user(db, current_user)
         timeline_entry = HealthTimeline(
             user_id=current_user.id,

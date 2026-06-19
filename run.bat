@@ -69,9 +69,24 @@ if exist "backend\.env" (
     echo [SKIP] backend\.env not found.
 )
 
+echo [2b/3] Initializing Tesseract OCR...
+set "TESSERACT_EXE=C:\Program Files\Tesseract-OCR\tesseract.exe"
+if exist "%TESSERACT_EXE%" (
+    set "TESSERACT_CMD=%TESSERACT_EXE%"
+    set "PATH=C:\Program Files\Tesseract-OCR;%PATH%"
+    echo [OK] Tesseract ready: %TESSERACT_EXE%
+) else (
+    where tesseract >nul 2>&1
+    if not errorlevel 1 (
+        echo [OK] Tesseract found on PATH.
+    ) else (
+        echo [WARN] Tesseract not found. Run setup.bat to install OCR support.
+    )
+)
+
 echo [3/3] Launching backend and frontend...
-start "HealthMitra Backend" /D "%BACKEND_DIR%" cmd /k "title HealthMitra Backend && "%VENV_PYTHON%" main.py"
-timeout /t 1 /nobreak >nul
+start "HealthMitra Backend" /D "%BACKEND_DIR%" cmd /k "set PYTHON_EXE=%VENV_PYTHON%&& call start_server.bat"
+timeout /t 2 /nobreak >nul
 start "HealthMitra Frontend" /D "%FRONTEND_DIR%" cmd /k "title HealthMitra Frontend && "%NPM_CMD%" run dev"
 
 echo.

@@ -434,52 +434,92 @@ def classify_parameter(param_key: str, value: float, gender: str = "male") -> Di
 
 def calculate_cv_risk(params: List[MedicalParameter]) -> Dict[str, Any]:
     """
-    Calculate Cardiovascular Risk Score.
-    Inputs: LDL, HDL, Triglycerides, Lp(a), Homocysteine.
-    If ANY missing: Return Unavailable.
+    Calculate Cardiovascular Risk Score from available lab markers.
+    Scores proportionally based on how many markers were extracted (partial vitals OK).
     """
-    required = ["LDL Cholesterol", "HDL Cholesterol", "Triglycerides", "lpa", "Homocysteine"]
-    
-    # Normalize for robust matching
-    available = {normalize_parameter_name(p.parameter): p.value for p in params if p.validated and p.value is not None}
-    
-    missing = [r for r in required if normalize_parameter_name(r) not in available]
-    if missing:
+    marker_rules = {
+        "LDL Cholesterol": [
+            (160, 30), (130, 15),
+        ],
+        "HDL Cholesterol": [
+            (40, 20, "below"),
+        ],
+        "Triglycerides": [
+            (200, 15), (150, 5),
+        ],
+        "lpa": [
+            (125, 20), (72, 10),
+        ],
+        "Homocysteine": [
+            (30, 15), (15, 5),
+        ],
+        "Fasting Blood Sugar": [
+            (126, 25), (100, 12),
+        ],
+        "Hemoglobin": [
+            (17, 10, "above"), (12, 10, "below"),
+        ],
+        "Total Cholesterol": [
+            (240, 20), (200, 10),
+        ],
+    }
+
+    available = {
+        normalize_parameter_name(p.parameter): p.value
+        for p in params if p.validated and p.value is not None
+    }
+
+    score = 0
+    max_score = 0
+    measured = []
+    missing = []
+
+    for marker, rules in marker_rules.items():
+        key = normalize_parameter_name(marker)
+        if key not in available:
+            missing.append(marker)
+            continue
+        val = available[key]
+        measured.append(marker)
+        for rule in rules:
+            threshold, points = rule[0], rule[1]
+            direction = rule[2] if len(rule) > 2 else "above"
+            max_score += points
+            if direction == "below":
+                if val < threshold:
+                    score += points
+            elif direction == "above":
+                if val > threshold:
+                    score += points
+            else:
+                if val > threshold:
+                    score += points
+
+    if not measured:
         return {
             "status": "Unavailable",
             "score": None,
-            "message": "Cardiovascular Risk Score Unavailable – Incomplete Data",
-            "missing": missing
+            "level": "Unknown",
+            "message": "No lab markers detected – upload a clearer report",
+            "missing": list(marker_rules.keys()),
+            "measured": [],
         }
-    
-    # Maps for easy access
-    val = {normalize_parameter_name(r): available[normalize_parameter_name(r)] for r in required}
-    
-    # Simplified clinical risk scoring logic
-    score = 0
-    if val[normalize_parameter_name("LDL Cholesterol")] > 160: score += 30
-    elif val[normalize_parameter_name("LDL Cholesterol")] > 130: score += 15
-    
-    if val[normalize_parameter_name("HDL Cholesterol")] < 40: score += 20
-    
-    if val[normalize_parameter_name("Triglycerides")] > 200: score += 15
-    elif val[normalize_parameter_name("Triglycerides")] > 150: score += 5
-    
-    if val[normalize_parameter_name("Lp(a)")] > 125: score += 20
-    elif val[normalize_parameter_name("Lp(a)")] > 72: score += 10
-    
-    if val[normalize_parameter_name("Homocysteine")] > 30: score += 15
-    elif val[normalize_parameter_name("Homocysteine")] > 15: score += 5
-    
-    risk_level = "Low"
-    if score >= 60: risk_level = "High"
-    elif score >= 30: risk_level = "Moderate"
-    
+
+    pct = min(max(int(round(score / max_score * 100)), 5), 95) if max_score else 5
+    if pct >= 60:
+        risk_level = "High"
+    elif pct >= 30:
+        risk_level = "Moderate"
+    else:
+        risk_level = "Low"
+
     return {
         "status": "Calculated",
-        "score": min(score, 100),
+        "score": pct,
         "level": risk_level,
-        "message": f"{risk_level} Cardiovascular Risk detected based on patterns."
+        "message": f"Based on {len(measured)} marker(s)",
+        "missing": missing,
+        "measured": measured,
     }
 
 # ===========================================================
